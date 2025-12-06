@@ -5,6 +5,7 @@ from rich.prompt import Prompt, IntPrompt
 from simple_term_menu import TerminalMenu
 from rich.panel import Panel
 from rich.text import Text
+from rich.figlet import Figlet # Import Figlet for larger text
 
 def display_help():
     """Displays the help message."""
@@ -19,23 +20,16 @@ Commands:
   exit                      Exit the application.
 """
     console.print(help_message)
-    # After displaying help, we need to wait for user input before clearing the screen
-    # to allow them to read the help message.
-    Prompt.ask("Press Enter to continue...")
 
 def interactive_mode():
     """Runs the application in interactive mode."""
     while True:
         console.clear() # Clear screen at the beginning of each iteration
 
-        # TODOGENIE Banner
-        console.print(
-            Panel(
-                Text("TODOGENIE", justify="center", style="bold green"),
-                style="bold blue",
-                width=console.width
-            )
-        )
+        # TODOGENIE Banner (larger, left-aligned, no outline)
+        figlet = Figlet(font="standard") # You can experiment with different fonts like "big", "slant", "block"
+        console.print(Text(figlet.renderText("TODOGENIE"), style="bold green", justify="left"))
+
 
         tasks = list_tasks()
         if tasks: # Conditional Task Display
@@ -77,7 +71,6 @@ def interactive_mode():
             description = Prompt.ask("Enter task description")
             task = add_task(description)
             console.print(f"[green]Added task: '{task.description}' with ID {task.id}[/green]")
-            Prompt.ask("Press Enter to continue...") # Wait for user to read message
         elif selected_option == "List all tasks":
             # Tasks are already displayed at the beginning of the loop
             # No need to do anything here, just let the loop redraw
@@ -87,7 +80,6 @@ def interactive_mode():
                 task_id = IntPrompt.ask("Enter task ID to update")
             except ValueError:
                 console.print("[red]Error: Task ID must be an integer.[/red]")
-                Prompt.ask("Press Enter to continue...")
                 continue
             new_description = Prompt.ask("Enter new description")
             task = update_task(task_id, new_description)
@@ -95,26 +87,22 @@ def interactive_mode():
                 console.print(f"[green]Updated task {task_id} to: '{task.description}'[/green]")
             else:
                 console.print(f"[red]Error: Task with ID {task_id} not found.[/red]")
-            Prompt.ask("Press Enter to continue...")
         elif selected_option == "Mark a task as complete":
             try:
                 task_id = IntPrompt.ask("Enter task ID to complete")
             except ValueError:
                 console.print("[red]Error: Task ID must be an integer.[/red]")
-                Prompt.ask("Press Enter to continue...")
                 continue
             task = complete_task(task_id)
             if task:
                 console.print(f"[green]Completed task {task_id}: '{task.description}'[/green]")
             else:
                 console.print(f"[red]Error: Task with ID {task_id} not found.[/red]")
-            Prompt.ask("Press Enter to continue...")
         elif selected_option == "Delete a task":
             try:
                 task_id = IntPrompt.ask("Enter task ID to delete")
             except ValueError:
                 console.print("[red]Error: Task ID must be an integer.[/red]")
-                Prompt.ask("Press Enter to continue...")
                 continue
             if confirm_delete(task_id):
                 if delete_task(task_id):
@@ -123,7 +111,6 @@ def interactive_mode():
                     console.print(f"[red]Error: Task with ID {task_id} not found.[/red]")
             else:
                 console.print(f"[yellow]Deletion of task {task_id} cancelled.[/yellow]")
-            Prompt.ask("Press Enter to continue...")
         elif selected_option == "Show help":
             display_help()
         elif selected_option == "Exit application":
