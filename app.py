@@ -1,7 +1,7 @@
 import sys
 from textual.app import App, ComposeResult
-from textual.widgets import Header, Footer, Container, Button, Input, Static
-from textual.containers import Vertical, Horizontal
+from textual.widgets import Header, Footer, Button, Input, Static
+from textual.containers import Vertical, Horizontal, Container
 from textual.screen import Screen
 from rich.panel import Panel
 from rich.text import Text
