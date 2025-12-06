@@ -5,7 +5,7 @@ from rich.prompt import Prompt, IntPrompt
 from simple_term_menu import TerminalMenu
 from rich.panel import Panel
 from rich.text import Text
-# from rich.figlet import Figlet # Removed as rich.figlet is not found
+from pyfiglet import Figlet # Import Figlet from pyfiglet
 
 def display_help():
     """Displays the help message."""
@@ -26,9 +26,9 @@ def interactive_mode():
     while True:
         console.clear() # Clear screen at the beginning of each iteration
 
-        # TODOGENIE Banner (left-aligned, bold, no outline)
-        # Using Text directly with bold/extra_bold for larger effect
-        console.print(Text("TODOGENIE", style="bold extra_bold green", justify="left"))
+        # TODOGENIE Banner (ASCII art using pyfiglet)
+        figlet = Figlet(font="standard") # Use a standard font for TODOGENIE
+        console.print(Text(figlet.renderText("TODOGENIE"), style="bold green"))
 
 
         tasks = list_tasks()
