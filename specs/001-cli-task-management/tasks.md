@@ -65,3 +65,15 @@
 ## Implementation Strategy
 
 The implementation will follow an MVP-first approach, starting with the core CRUD functionality (add, list) and then incrementally adding the other features.
+
+## Phase 10: Interactive Mode
+
+- [X] T021 [IM] Refactor `app.py` to support an interactive loop.
+- [X] T022 [IM] Implement a main menu for interactive mode.
+- [X] T023 [IM] Integrate `add` command into interactive mode.
+- [X] T024 [IM] Integrate `list` command into interactive mode.
+- [X] T025 [IM] Integrate `update` command into interactive mode.
+- [X] T026 [IM] Integrate `complete` command into interactive mode.
+- [X] T027 [IM] Integrate `delete` command into interactive mode.
+- [X] T028 [IM] Implement an "exit" option for interactive mode.
+- [X] T029 [IM] Display tasks automatically when entering interactive mode.
