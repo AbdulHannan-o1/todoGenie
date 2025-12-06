@@ -13,10 +13,12 @@ from utils import console, confirm_delete # console will be replaced by self.app
 class TodoBanner(Static):
     """A widget to display the TODOGENIE banner."""
     def compose(self) -> ComposeResult:
-        yield Panel(
-            Text("TODOGENIE", justify="center", style="bold green"),
-            style="bold blue",
-            width=self.app.console.width
+        yield Static(
+            Panel(
+                Text("TODOGENIE", justify="center", style="bold green"),
+                style="bold blue",
+                width=self.app.console.width
+            )
         )
 
 class TaskListDisplay(Static):
