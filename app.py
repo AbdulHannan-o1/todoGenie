@@ -23,8 +23,9 @@ Commands:
 def interactive_mode():
     """Runs the application in interactive mode."""
     while True:
-        console.clear() # Clear screen at the beginning of each iteration
+        console.clear() # Clear screen at the beginning of each iteration (T039)
 
+        # TODOGENIE Banner (T034)
         console.print(
             Panel(
                 Text("TODOGENIE", justify="center", style="bold green"),
@@ -34,7 +35,7 @@ def interactive_mode():
         )
 
         tasks = list_tasks()
-        if tasks:
+        if tasks: # Conditional Task Display (T035)
             console.print("\n--- Current Tasks ---", style="bold blue")
             display_tasks(tasks)
             console.print("---------------------\n", style="bold blue")
@@ -58,8 +59,8 @@ def interactive_mode():
             menu_cursor_style=("fg_green", "bold"),
             menu_highlight_style=("fg_green", "bold"),
             cycle_cursor=True,
-            clear_screen=True, # Re-enabled
-            cursor_index=0 # Default to "Add a new task"
+            clear_screen=True, # Re-enabled (T038)
+            default_menu_index=0 # Default to "Add a new task"
         )
         selected_index = terminal_menu.show()
 
