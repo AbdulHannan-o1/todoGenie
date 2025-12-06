@@ -77,3 +77,10 @@ The implementation will follow an MVP-first approach, starting with the core CRU
 - [X] T027 [IM] Integrate `delete` command into interactive mode.
 - [X] T028 [IM] Implement an "exit" option for interactive mode.
 - [X] T029 [IM] Display tasks automatically when entering interactive mode.
+
+## Phase 11: Advanced Interactive UI
+
+- [X] T030 [UI] Install `simple-term-menu` library.
+- [X] T031 [UI] Refactor `app.py` to use `simple-term-menu` for interactive menu navigation.
+- [X] T032 [UI] Configure `simple-term-menu` to display a green `>` indicator for the selected option.
+- [X] T033 [UI] Ensure default selection is "add" in the interactive menu.

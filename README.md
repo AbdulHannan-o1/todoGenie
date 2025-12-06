@@ -26,17 +26,21 @@ This is a simple Command Line Interface (CLI) application for managing tasks. It
 
 ### 3. Running the Application
 
+Before running the application, ensure your virtual environment is activated.
+
 To run the application in **interactive mode**, simply execute the `app.py` script without any arguments:
 
 ```bash
+source venv/bin/activate # Activate the virtual environment
 python app.py
 ```
 
-This will start the application in an interactive loop, displaying current tasks and a menu of options.
+This will start the application in an interactive loop, displaying current tasks and a numbered menu of options. You will select an option by entering its corresponding number.
 
-You can also run individual commands in **non-interactive mode** (for scripting or single operations):
+You can also run individual commands in **non-interactive mode** (for scripting or single operations) after activating the virtual environment:
 
 ```bash
+source venv/bin/activate # Activate the virtual environment
 python app.py <command> [arguments]
 ```
 

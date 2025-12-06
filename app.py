@@ -1,7 +1,8 @@
 import sys
 from commands import add_task, list_tasks, update_task, complete_task, delete_task
 from utils import console, display_tasks, confirm_delete
-from rich.prompt import Prompt
+from rich.prompt import Prompt, IntPrompt
+from simple_term_menu import TerminalMenu
 
 def display_help():
     """Displays the help message."""
@@ -19,52 +20,63 @@ Commands:
 
 def interactive_mode():
     """Runs the application in interactive mode."""
+    menu_entries = [
+        "Add a new task",
+        "List all tasks",
+        "Update a task",
+        "Mark a task as complete",
+        "Delete a task",
+        "Show help",
+        "Exit application"
+    ]
+
     while True:
         console.print("\n--- Current Tasks ---")
         tasks = list_tasks()
         display_tasks(tasks)
         console.print("---------------------\n")
 
-        display_help()
-        command_line = Prompt.ask("Enter command")
-        args = command_line.split()
+        terminal_menu = TerminalMenu(
+            menu_entries,
+            title="Select an option:",
+            menu_indicator="> ",
+            menu_cursor="> ",
+            menu_cursor_style=("fg_green", "bold"),
+            menu_highlight_style=("fg_green", "bold"),
+            cycle_cursor=True,
+            clear_screen=True,
+            default_menu_index=0 # Default to "Add a new task"
+        )
+        selected_index = terminal_menu.show()
 
-        if not args:
-            continue
+        if selected_index is None: # User pressed Ctrl+C or Esc
+            console.print("Exiting application. Goodbye!")
+            break
 
-        command = args[0]
+        selected_option = menu_entries[selected_index]
 
-        if command == "add":
-            if len(args) < 2:
-                console.print("Usage: add <description>")
-                continue
-            description = " ".join(args[1:])
+        if selected_option == "Add a new task":
+            description = Prompt.ask("Enter task description")
             task = add_task(description)
             console.print(f"Added task: '{task.description}' with ID {task.id}")
-        elif command == "list":
+elif selected_option == "List all tasks":
             # Tasks are already displayed at the beginning of the loop
             pass
-        elif command == "update":
-            if len(args) < 3:
-                console.print("Usage: update <id> <new-description>")
-                continue
+elif selected_option == "Update a task":
             try:
-                task_id = int(args[1])
+                task_id = IntPrompt.ask("Enter task ID to update")
             except ValueError:
                 console.print("Error: Task ID must be an integer.")
                 continue
-            new_description = " ".join(args[2:])
+            new_description = Prompt.ask("Enter new description")
             task = update_task(task_id, new_description)
             if task:
                 console.print(f"Updated task {task_id} to: '{task.description}'")
             else:
                 console.print(f"Error: Task with ID {task_id} not found.")
-        elif command == "complete":
-            if len(args) < 2:
-                console.print("Usage: complete <id>")
-                continue
+elif selected_option == "Mark a task as complete":
             try:
-                task_id = int(args[1])
+                task_id = IntPrompt.ask("Enter task ID to complete")
             except ValueError:
                 console.print("Error: Task ID must be an integer.")
                 continue
@@ -73,12 +85,9 @@ def interactive_mode():
                 console.print(f"Completed task {task_id}: '{task.description}'")
             else:
                 console.print(f"Error: Task with ID {task_id} not found.")
-        elif command == "delete":
-            if len(args) < 2:
-                console.print("Usage: delete <id>")
-                continue
+elif selected_option == "Delete a task":
             try:
-                task_id = int(args[1])
+                task_id = IntPrompt.ask("Enter task ID to delete")
             except ValueError:
                 console.print("Error: Task ID must be an integer.")
                 continue
@@ -89,13 +98,11 @@ def interactive_mode():
                     console.print(f"Error: Task with ID {task_id} not found.")
             else:
                 console.print(f"Deletion of task {task_id} cancelled.")
-        elif command == "help":
+elif selected_option == "Show help":
             display_help()
-        elif command == "exit":
+elif selected_option == "Exit application":
             console.print("Exiting application. Goodbye!")
             break
-        else:
-            console.print(f"Unknown command: {command}")
 
 def main():
     """Main entry point for the CLI application."""
@@ -109,10 +116,10 @@ def main():
             description = " ".join(sys.argv[2:])
             task = add_task(description)
             console.print(f"Added task: '{task.description}' with ID {task.id}")
-        elif command == "list":
+elif command == "list":
             tasks = list_tasks()
             display_tasks(tasks)
-        elif command == "update":
+elif command == "update":
             if len(sys.argv) < 4:
                 console.print("Usage: python app.py update <id> <new-description>")
                 return
@@ -127,7 +134,7 @@ def main():
                 console.print(f"Updated task {task_id} to: '{task.description}'")
             else:
                 console.print(f"Error: Task with ID {task_id} not found.")
-        elif command == "complete":
+elif command == "complete":
             if len(sys.argv) < 3:
                 console.print("Usage: python app.py complete <id>")
                 return
@@ -141,7 +148,7 @@ def main():
                 console.print(f"Completed task {task_id}: '{task.description}'")
             else:
                 console.print(f"Error: Task with ID {task_id} not found.")
-        elif command == "delete":
+elif command == "delete":
             if len(sys.argv) < 3:
                 console.print("Usage: python app.py delete <id>")
                 return
@@ -157,9 +164,9 @@ def main():
                     console.print(f"Error: Task with ID {task_id} not found.")
             else:
                 console.print(f"Deletion of task {task_id} cancelled.")
-        elif command == "help":
+elif command == "help":
             display_help()
-        else:
+else:
             console.print(f"Unknown command: {command}")
     else:
         # Interactive mode
