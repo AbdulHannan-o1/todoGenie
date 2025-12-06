@@ -8,21 +8,22 @@
 ## 1. Technical Context
 
 - **Technology Stack**: Python 3.10+ (Object-Oriented)
-- **UI**: Full-fledged Terminal User Interface (TUI) using the `Textual` framework, built on `rich`, for interactive, in-place updates, arrow-key navigable menus, and rich styling.
+- **UI**: Interactive, rich, colored command-line interface using the `rich` library for output and `simple-term-menu` for arrow-key navigable menu selection.
 - **Data Storage**: In-memory, as per the constitution.
-- **Dependencies**: `rich`, `Textual`
+- **Dependencies**: `rich`, `simple-term-menu`
 - **Unknowns**:
-  - Best practices for structuring an object-oriented Python TUI application with `Textual`.
-  - Optimizing `Textual` applications for performance and responsiveness.
+  - Best practices for structuring an object-oriented Python CLI application.
+  - Best practices for using the `rich` library for CLI UI design.
+  - Best practices for creating an interactive CLI with `rich` and `simple-term-menu`.
 
 ## 2. Constitution Check
 
 - **I. Spec-First Design**: Compliant. The implementation will follow the provided spec.
-- **II. CLI-First Interface**: Compliant. The application is a TUI.
+- **II. CLI-First Interface**: Compliant. The application is a CLI.
 - **III. In-Memory Storage**: Compliant. Data will be stored in-memory.
 - **IV. CRUD and AI-Driven Enhancements**: Compliant. The plan covers the CRUD functionality.
 - **V. Modular Architecture**: Compliant. The implementation will follow the specified modular architecture.
-- **VI. Observability & User Feedback**: Compliant. The plan includes using `Textual` (which uses `rich`) for rich feedback.
+- **VI. Observability & User Feedback**: Compliant. The plan includes using the `rich` library for colored feedback.
 
 ## 3. Phase 0: Outline & Research
 
@@ -38,58 +39,52 @@ See `research.md` for details.
 
 This phase will be detailed in the `tasks.md` file.
 
-## 9. TUI Framework Integration
+## 6. Interactive Mode
 
-This section outlines the architectural shift to a full-fledged Terminal User Interface (TUI) framework, `Textual`, to address the limitations of the previous interactive mode, particularly regarding UI updates and flickering.
+The application will operate in an interactive loop, presenting a menu of options to the user that can be navigated using arrow keys. After each command execution, the menu will reappear, and the current list of tasks will be displayed.
 
-### 9.1. Rationale for `Textual`
+### Interaction Flow:
 
-`Textual` is chosen for its robust capabilities in building modern TUIs, its foundation on the `rich` library (which we are already using), and its ability to provide:
--   **True in-place updates**: Only changed parts of the screen are redrawn, eliminating flickering.
--   **Widget-based UI**: Enables modular and reusable UI components for banners, task lists, and menus.
--   **Event-driven architecture**: Provides a structured way to handle user input (keyboard, mouse) and application logic.
--   **Scalability**: Offers a more maintainable and extensible framework for complex interactive terminal applications.
+1.  Application starts.
+2.  If tasks exist, they are displayed in a `rich` table.
+3.  A menu of available commands (add, list, update, complete, delete, help, exit) is presented, with an arrow (`>`) indicating the currently selected option.
+4.  User navigates the menu using arrow keys (up/down) and selects a command by hitting Enter.
+5.  Application prompts for necessary arguments (e.g., description for 'add', ID for 'delete').
+6.  Command is executed.
+7.  Tasks are displayed again (if applicable).
+8.  Menu reappears.
+9.  Loop continues until 'exit' command is chosen.
 
-### 9.2. Architectural Changes
+## 7. UI Enhancements
 
-The `app.py` will be refactored to become a `Textual` application. This involves:
--   Defining a main `App` class inheriting from `textual.app.App`.
--   Implementing `Compose` methods to define the application's layout and widgets.
--   Handling user input and command execution through `Textual`'s message and action system.
+This section outlines further enhancements to the user interface to improve clarity and user experience.
 
-### 9.3. UI Components within `Textual`
+### 7.1. "TODOGENIE" Banner
 
--   **Banner**: A dedicated `Textual` widget will display the "TODOGENIE" banner.
--   **Task List**: A `Textual` widget (e.g., `DataTable` or custom widget) will display tasks, updating in place as tasks are added, modified, or deleted. Conditional display (only if tasks exist) will be managed within this widget.
--   **Interactive Menu**: A `Textual` widget (e.g., `ListView` or custom widget) will provide arrow-key navigable menu options, with a clear visual indicator for the selected item and a default selection.
--   **Input Prompts**: `Textual`'s input widgets will be used for gathering user input (e.g., task descriptions, IDs).
+A prominent "TODOGENIE" banner will be displayed upon application startup to provide a clear branding and welcome message.
 
-### 9.4. Benefits
+### 7.2. Conditional Task Display
 
--   Elimination of UI flickering.
--   More responsive and intuitive user experience.
--   Improved code organization and maintainability for the UI layer.
--   Foundation for future advanced TUI features.
+The task table will only be displayed if there are active tasks. If the task list is empty, the table will be omitted to reduce clutter.
 
-## 10. UI Enhancements (Textual)
+### 7.3. Blinking Fix for `help` and `list`
 
-This section details further enhancements to the TUI application, focusing on improving user experience, interactivity, and visual appeal based on user feedback and best practices for `Textual` applications.
+The issue where the screen "blinks" or redraws rapidly when `help` or `list` commands are executed will be addressed. This likely involves adjusting screen clearing behavior or ensuring output persistence.
 
-### 10.1. Dynamic Status Messages
+### 7.4. Enhanced Color Usage
 
-To provide immediate and non-intrusive feedback to the user, a dedicated `StatusBar` widget will be implemented. This widget will display transient messages (e.g., "Task added successfully!", "Error: Task not found.") for a short duration, enhancing the application's responsiveness and user guidance.
+The application's output will be enhanced with additional `rich` styling and colors to improve readability and visual appeal. This includes:
+-   Coloring messages (e.g., success, error, informational).
+-   Potentially adding more color to the task table or menu.
 
-### 10.2. Interactive Task List (`DataTable`)
+## 8. UI Refresh
 
-The current static task list will be upgraded to a `textual.widgets.DataTable`. This change will significantly improve the interactivity and presentation of tasks by enabling:
--   **Column Sorting**: Users will be able to sort tasks by various criteria (e.g., ID, description, status).
--   **Row Selection**: Tasks can be selected, laying the groundwork for future features where selected tasks can be directly acted upon (e.g., pre-filling update forms).
--   **Enhanced Visuals**: `DataTable` offers richer styling and layout options compared to a basic `rich.table.Table`.
+This section addresses the user's feedback regarding the cluttered output and aims to provide a cleaner, more "in-place" update experience.
 
-### 10.3. Custom CSS Styling
+### 8.1. Screen Clearing
 
-To move beyond the default `Textual` appearance and create a more "interesting" and branded interface, a custom CSS file (`todo.css`) will be introduced. This file will define styles for:
--   **Banner**: Custom fonts, colors, and background for the "TODOGENIE" banner.
--   **Task List**: Styling for table headers, rows, and selected items.
--   **Input Screens**: Consistent styling for input fields, buttons, and titles.
--   **Overall Layout**: Adjustments to padding, margins, and borders for a polished look.
+To prevent the entire UI from being re-printed and pushed up the terminal, the screen will be cleared at the beginning of each interactive loop iteration. This ensures that the new display of tasks and the menu always starts from a clean slate.
+
+### 8.2. `TerminalMenu` `clear_screen` Re-enablement
+
+The `clear_screen=True` option in `simple-term-menu`'s `TerminalMenu` will be re-enabled. This, in conjunction with the explicit screen clearing, will ensure a consistent and clean redraw of the menu and tasks. The task display logic will be carefully placed to ensure it appears after the screen clear but before the menu is presented.

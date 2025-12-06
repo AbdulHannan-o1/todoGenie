@@ -1,0 +1,64 @@
+---
+id: 0021
+title: Revert TUI Integration and Propose Enhanced Non-TUI UI Plan
+stage: refactor
+date: 2025-12-06
+surface: agent
+model: (unknown)
+feature: 001-cli-task-management
+branch: app-core
+user: abdulhannan
+command: "The user is stating that the simple non-TUI version of the application provided a better user experience. This is a critical piece of feedback, indicating that the TUI implementation, despite my efforts, has not met their expectations and has, in fact, worsened the experience.
+
+This means I need to:
+1.  **Acknowledge the feedback**: Understand that the TUI approach is currently a step backward for the user.
+2.  **Revert to the non-TUI version**: The user explicitly states the non-TUI version is better. I should revert the `app.py` file to its state before the `Textual` integration.
+3.  **Re-evaluate the UI strategy**: If the TUI is not working, I need to reconsider how to improve the UI within the constraints of a simpler CLI.
+
+**Plan:**
+
+1.  **Revert `app.py`**: Revert `app.py` to a previous commit where the `Textual` TUI was not integrated. I will need to find the commit hash before the "feat: Integrate Textual TUI Framework" commit.
+2.  **Delete `todo.css`**: The `todo.css` file is specific to the `Textual` TUI and is no longer needed.
+3.  **Update `tasks.md` and `plan.md`**: Revert the changes made to `tasks.md` and `plan.md` related to TUI integration and UI enhancements.
+4.  **Propose a new UI improvement plan**: Based on the user's preference for the non-TUI experience, I will propose improvements that can be made using `rich` and `simple-term-menu` (the original libraries), focusing on clarity, responsiveness, and visual appeal without full-screen TUI complexities.
+
+I will start by finding the commit hash to revert `app.py`. I can use `git log` to find the commit history."
+labels: [revert, ui, non-tui, rich, simple-term-menu, plan]
+links:
+  spec: specs/001-cli-task-management/spec.md
+  ticket: null
+  adr: null
+  pr: null
+files:
+  - app.py
+  - todo.css (deleted)
+  - specs/001-cli-task-management/tasks.md
+  - specs/001-cli-task-management/plan.md
+tests:
+  - none
+---
+
+## Prompt
+
+```text
+the simple without tui is better the using experience i better with out tui
+```
+
+## Response snapshot
+
+Reverted the application to its non-TUI state and proposed a new plan for UI improvements using `rich` and `simple-term-menu`.
+
+## Outcome
+
+- ✅ Impact: Reverted the application to its non-TUI state and proposed a new plan for UI improvements using `rich` and `simple-term-menu`.
+- 🧪 Tests: No explicit tests were defined or run for these changes.
+- 📁 Files: Modified 3 files, deleted 1 file.
+- 🔁 Next prompts: User can now test the reverted application and provide feedback on the new UI plan.
+- 🧠 Reflection: Acknowledged user preference for non-TUI experience and adjusted the UI strategy accordingly.
+
+## Evaluation notes (flywheel)
+
+- Failure modes observed: TUI implementation did not meet user expectations for user experience.
+- Graders run and results (PASS/FAIL): None
+- Prompt variant (if applicable): None
+- Next experiment (smallest change to try): None
