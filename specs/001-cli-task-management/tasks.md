@@ -84,3 +84,15 @@ The implementation will follow an MVP-first approach, starting with the core CRU
 - [X] T031 [UI] Refactor `app.py` to use `simple-term-menu` for interactive menu navigation.
 - [X] T032 [UI] Configure `simple-term-menu` to display a green `>` indicator for the selected option.
 - [X] T033 [UI] Ensure default selection is "add" in the interactive menu.
+
+## Phase 12: UI Enhancements
+
+- [X] T034 [UI] Implement "TODOGENIE" banner display on application start.
+- [X] T035 [UI] Modify `interactive_mode` to conditionally display the task table only if tasks exist.
+- [X] T036 [UI] Fix blinking issue for `help` and `list` commands in interactive mode.
+- [X] T037 [UI] Add more `rich` styling and colors to output messages.
+
+## Phase 13: UI Refresh
+
+- [X] T038 [UI] Re-enable `clear_screen=True` in `TerminalMenu` and move task display logic.
+- [X] T039 [UI] Add `console.clear()` at the beginning of each `while` loop iteration in `interactive_mode`.

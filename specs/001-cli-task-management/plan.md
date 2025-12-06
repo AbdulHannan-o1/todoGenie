@@ -54,3 +54,37 @@ The application will operate in an interactive loop, presenting a menu of option
 7.  Tasks are displayed again (if applicable).
 8.  Menu reappears.
 9.  Loop continues until 'exit' command is chosen.
+
+## 7. UI Enhancements
+
+This section outlines further enhancements to the user interface to improve clarity and user experience.
+
+### 7.1. "TODOGENIE" Banner
+
+A prominent "TODOGENIE" banner will be displayed upon application startup to provide a clear branding and welcome message.
+
+### 7.2. Conditional Task Display
+
+The task table will only be displayed if there are active tasks. If the task list is empty, the table will be omitted to reduce clutter.
+
+### 7.3. Blinking Fix for `help` and `list`
+
+The issue where the screen "blinks" or redraws rapidly when `help` or `list` commands are executed will be addressed. This likely involves adjusting screen clearing behavior or ensuring output persistence.
+
+### 7.4. Enhanced Color Usage
+
+The application's output will be enhanced with additional `rich` styling and colors to improve readability and visual appeal. This includes:
+-   Coloring messages (e.g., success, error, informational).
+-   Potentially adding more color to the task table or menu.
+
+## 8. UI Refresh
+
+This section addresses the user's feedback regarding the cluttered output and aims to provide a cleaner, more "in-place" update experience.
+
+### 8.1. Screen Clearing
+
+To prevent the entire UI from being re-printed and pushed up the terminal, the screen will be cleared at the beginning of each interactive loop iteration. This ensures that the new display of tasks and the menu always starts from a clean slate.
+
+### 8.2. `TerminalMenu` `clear_screen` Re-enablement
+
+The `clear_screen=True` option in `simple-term-menu`'s `TerminalMenu` will be re-enabled. This, in conjunction with the explicit screen clearing, will ensure a consistent and clean redraw of the menu and tasks. The task display logic will be carefully placed to ensure it appears after the screen clear but before the menu is presented.
