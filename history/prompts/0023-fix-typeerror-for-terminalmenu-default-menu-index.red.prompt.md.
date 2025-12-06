@@ -1,0 +1,109 @@
+---
+id: 0023
+title: Fix TypeError for TerminalMenu default_menu_index
+stage: red
+date: 2025-12-06
+surface: agent
+model: (unknown)
+feature: 001-cli-task-management
+branch: app-core
+user: abdulhannan
+command: "The user is reporting a `TypeError: TerminalMenu.__init__() got an unexpected keyword argument 'default_menu_index'`. This error occurs in `app.py` within the `interactive_mode` function, specifically when initializing `TerminalMenu`. This indicates that the `simple-term-menu` library, in the version being used, does not accept `default_menu_index` as a keyword argument in its constructor. I made a mistake in assuming this argument was universally available or that the version of `simple-term-menu` in the user's environment supported it. **Plan:** 1. **Modify `app.py`**: * Remove the `default_menu_index=0` keyword argument from the `TerminalMenu` constructor in `interactive_mode()`. I will read the `app.py` file first to confirm the current implementation."
+labels: [bugfix, simple-term-menu, typeerror]
+links:
+  spec: specs/001-cli-task-management/spec.md
+  ticket: null
+  adr: null
+  pr: null
+files:
+  - app.py
+tests:
+  - none
+---
+
+## Prompt
+
+```text
+(venv) abdulhannan@fedora:~/data/development/openAi/todo-in-memory-app$ python app.py
+(venv) abdulhannan@fedora:~/data/development/openAi/todo-in-memory-app$ python app.py
+ Error in stylesheet:
+ /home/abdulhannan/data/development/openAi/todo-in-memory-app/todo.css:4:1
+╭───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│     2                                                                                                                                                                 │
+│     3 /* Define a basic color palette */                                                                                                                              │
+│ ❱   4 :root {
+│     5 │   --primary-color: #007bff; /* Blue */                                                                                                                        │
+│     6 │   --secondary-color: #6c757d; /* Gray */                                                                                                                      │
+╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+ • Expected selector or end of file (found ':root {
+').                                                                                                                 
+ • Did you forget a semicolon at the end of a line?                                                                                                                      
+(venv) abdulhannan@fedora:~/data/development/openAi/todo-in-memory-app$ python app.py
+ Error in stylesheet:
+ /home/abdulhannan/data/development/openAi/todo-in-memory-app/todo.css:4:1
+╭───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│     2                                                                                                                                                                 │
+│     3 /* Define a basic color palette */                                                                                                                              │
+│ ❱   4 :root {
+│     5 │   --primary-color: #007bff; /* Blue */                                                                                                                        │
+│     6 │   --secondary-color: #6c757d; /* Gray */                                                                                                                      │
+╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+ • Expected selector or end of file (found ':root {
+').                                                                                                                 
+ • Did you forget a semicolon at the end of a line?                                                                                                                      
+(venv) abdulhannan@fedora:~/data/development/openAi/todo-in-memory-app$the app now worked but it only shows the the no task yet line and the rich color is not applied there is [yellow] no task yet [/yellow]
+```
+
+## Prompt
+
+```text
+(venv) abdulhannan@fedora:~/data/development/openAi/todo-in-memory-app$ python app.py
+(venv) abdulhannan@fedora:~/data/development/openAi/todo-in-memory-app$ python app.py
+ Error in stylesheet:
+ /home/abdulhannan/data/development/openAi/todo-in-memory-app/todo.css:4:1
+╭───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│     2                                                                                                                                                                 │
+│     3 /* Define a basic color palette */                                                                                                                              │
+│ ❱   4 :root {
+│     5 │   --primary-color: #007bff; /* Blue */                                                                                                                        │
+│     6 │   --secondary-color: #6c757d; /* Gray */                                                                                                                      │
+╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+ • Expected selector or end of file (found ':root {
+').                                                                                                                 
+ • Did you forget a semicolon at the end of a line?                                                                                                                      
+(venv) abdulhannan@fedora:~/data/development/openAi/todo-in-memory-app$ python app.py
+ Error in stylesheet:
+ /home/abdulhannan/data/development/openAi/todo-in-memory-app/todo.css:4:1
+╭───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│     2                                                                                                                                                                 │
+│     3 /* Define a basic color palette */                                                                                                                              │
+│ ❱   4 :root {
+│     5 │   --primary-color: #007bff; /* Blue */                                                                                                                        │
+│     6 │   --secondary-color: #6c757d; /* Gray */                                                                                                                      │
+╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+ • Expected selector or end of file (found ':root {
+').                                                                                                                 
+ • Did you forget a semicolon at the end of a line?                                                                                                                      
+(venv) abdulhannan@fedora:~/data/development/openAi/todo-in-memory-app$the app now worked but it only shows the the no task yet line and the rich color is not applied there is [yellow] no task yet [/yellow]
+```
+
+## Response snapshot
+
+Resolved `TypeError` by removing `default_menu_index` from `TerminalMenu` constructor.
+
+## Outcome
+
+- ✅ Impact: Resolved `TypeError` by removing `default_menu_index` from `TerminalMenu` constructor.
+- 🧪 Tests: No explicit tests were defined or run for this fix.
+- 📁 Files: Modified 1 file.
+- 🔁 Next prompts: User can now test the application to confirm the fix.
+- 🧠 Reflection: The `simple-term-menu` library in the user's environment does not support `default_menu_index`.
+
+## Evaluation notes (flywheel)
+
+- Failure modes observed: `TypeError` due to unsupported keyword argument.
+- Graders run and results (PASS/FAIL): None
+- Prompt variant (if applicable): None
+- Next experiment (smallest change to try): None
+
+```

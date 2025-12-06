@@ -60,7 +60,7 @@ def interactive_mode():
             menu_highlight_style=("fg_green", "bold"),
             cycle_cursor=True,
             clear_screen=True, # Re-enabled (T038)
-            default_menu_index=0 # Default to "Add a new task"
+            # default_menu_index=0 # Removed to fix TypeError
         )
         selected_index = terminal_menu.show()
 
