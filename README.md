@@ -26,7 +26,15 @@ This is a simple Command Line Interface (CLI) application for managing tasks. It
 
 ### 3. Running the Application
 
-To run the application, execute the `app.py` script with the desired command:
+To run the application in **interactive mode**, simply execute the `app.py` script without any arguments:
+
+```bash
+python app.py
+```
+
+This will start the application in an interactive loop, displaying current tasks and a menu of options.
+
+You can also run individual commands in **non-interactive mode** (for scripting or single operations):
 
 ```bash
 python app.py <command> [arguments]
@@ -46,3 +54,4 @@ python app.py <command> [arguments]
     Example: `python app.py delete 1`
 -   **`help`**: Show the help message.
     Example: `python app.py help`
+-   **`exit`**: Exit the interactive application.
