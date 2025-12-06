@@ -96,3 +96,17 @@ The implementation will follow an MVP-first approach, starting with the core CRU
 
 - [X] T038 [UI] Re-enable `clear_screen=True` in `TerminalMenu` and move task display logic.
 - [X] T039 [UI] Add `console.clear()` at the beginning of each `while` loop iteration in `interactive_mode`.
+
+## Phase 14: TUI Framework Integration
+
+- [X] T040 [TUI] Research suitable Python TUI libraries and evaluate their fit.
+- [X] T041 [TUI] Make a decision on the TUI library to use (e.g., `Textual`), documenting the rationale.
+- [X] T042 [TUI] Install the chosen TUI library (`Textual`).
+- [X] T043 [TUI] Refactor `app.py` to initialize and run the TUI application.
+- [X] T044 [TUI] Implement the main TUI application class.
+- [X] T045 [TUI] Create a TUI widget to display the "TODOGENIE" banner.
+- [X] T046 [TUI] Create a TUI widget to display the task list, ensuring conditional display and in-place updates.
+- [X] T047 [TUI] Create a TUI widget for the interactive menu, supporting arrow-key navigation, visual indicator, and default selection.
+- [X] T048 [TUI] Integrate command execution (add, update, delete, complete, help, exit) within the TUI event loop.
+- [X] T049 [TUI] Ensure smooth transitions and minimal flickering.
+- [X] T050 [TUI] Review and enhance color usage within the TUI framework.

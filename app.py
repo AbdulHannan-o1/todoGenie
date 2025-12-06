@@ -1,190 +1,211 @@
 import sys
-from commands import add_task, list_tasks, update_task, complete_task, delete_task
-from utils import console, display_tasks, confirm_delete
-from rich.prompt import Prompt, IntPrompt
-from simple_term_menu import TerminalMenu
+from textual.app import App, ComposeResult
+from textual.widgets import Header, Footer, Container, Button, Input, Static
+from textual.containers import Vertical, Horizontal
+from textual.screen import Screen
 from rich.panel import Panel
 from rich.text import Text
+from rich.table import Table
 
-def display_help():
-    """Displays the help message."""
-    help_message = """
-Commands:
-  add <description>         Add a new task.
-  list                      List all tasks.
-  update <id> <new-description> Update a task's description.
-  complete <id>             Mark a task as complete.
-  delete <id>               Delete a task.
-  help                      Show this help message.
-  exit                      Exit the application.
-"""
-    console.print(help_message)
+from commands import add_task, list_tasks, update_task, complete_task, delete_task
+from utils import console, confirm_delete # console will be replaced by self.app.console
 
-def interactive_mode():
-    """Runs the application in interactive mode."""
-    while True:
-        console.clear() # Clear screen at the beginning of each iteration
-
-        console.print(
-            Panel(
-                Text("TODOGENIE", justify="center", style="bold green"),
-                style="bold blue",
-                width=console.width
-            )
+class TodoBanner(Static):
+    """A widget to display the TODOGENIE banner."""
+    def compose(self) -> ComposeResult:
+        yield Panel(
+            Text("TODOGENIE", justify="center", style="bold green"),
+            style="bold blue",
+            width=self.app.console.width
         )
 
+class TaskListDisplay(Static):
+    """A widget to display the list of tasks."""
+    def on_mount(self) -> None:
+        self.update_tasks()
+
+    def update_tasks(self) -> None:
         tasks = list_tasks()
         if tasks:
-            console.print("\n--- Current Tasks ---", style="bold blue")
-            display_tasks(tasks)
-            console.print("---------------------\n", style="bold blue")
+            table = Table(title="Tasks", style="bold blue")
+            table.add_column("ID", style="cyan")
+            table.add_column("Description", style="magenta")
+            table.add_column("Status", style="green")
+
+            for task in tasks:
+                table.add_row(str(task.id), task.description, task.status)
+            self.update(table)
         else:
-            console.print("\n--- [yellow]No tasks yet. Add one![/yellow] ---\n")
+            self.update(Text("--- [yellow]No tasks yet. Add one![/yellow] ---", justify="center"))
 
-        menu_entries = [
-            "Add a new task",
-            "List all tasks",
-            "Update a task",
-            "Mark a task as complete",
-            "Delete a task",
-            "Show help",
-            "Exit application"
-        ]
+class TodoApp(App):
+    """Our TUI Todo Application."""
 
-        terminal_menu = TerminalMenu(
-            menu_entries,
-            title="Select an option:",
-            menu_cursor="> ",
-            menu_cursor_style=("fg_green", "bold"),
-            menu_highlight_style=("fg_green", "bold"),
-            cycle_cursor=True,
-            clear_screen=True, # Re-enabled
-            cursor_index=0 # Default to "Add a new task"
+    BINDINGS = [
+        ("a", "add_task_prompt", "Add Task"),
+        ("l", "list_tasks_action", "List Tasks"),
+        ("u", "update_task_prompt", "Update Task"),
+        ("c", "complete_task_prompt", "Complete Task"),
+        ("d", "delete_task_prompt", "Delete Task"),
+        ("h", "show_help", "Help"),
+        ("q", "quit_app", "Quit")
+    ]
+
+    def compose(self) -> ComposeResult:
+        """Create child widgets for the app."""
+        yield Header()
+        yield TodoBanner()
+        yield TaskListDisplay()
+        yield Footer()
+
+    def action_add_task_prompt(self) -> None:
+        self.app.push_screen(AddTaskScreen())
+
+    def action_list_tasks_action(self) -> None:
+        self.query_one(TaskListDisplay).update_tasks()
+
+    def action_update_task_prompt(self) -> None:
+        self.app.push_screen(UpdateTaskScreen())
+
+    def action_complete_task_prompt(self) -> None:
+        self.app.push_screen(CompleteTaskScreen())
+
+    def action_delete_task_prompt(self) -> None:
+        self.app.push_screen(DeleteTaskScreen())
+
+    def action_show_help(self) -> None:
+        self.app.push_screen(HelpScreen())
+
+    def action_quit_app(self) -> None:
+        self.exit()
+
+class AddTaskScreen(Screen):
+    def compose(self) -> ComposeResult:
+        yield Vertical(
+            Static("Add New Task", classes="title"),
+            Input(placeholder="Task description", id="add_description_input"),
+            Button("Add", variant="primary", id="add_task_button"),
+            Button("Cancel", variant="default", id="cancel_button")
         )
-        selected_index = terminal_menu.show()
 
-        if selected_index is None: # User pressed Ctrl+C or Esc
-            console.print("[blue]Exiting application. Goodbye![/blue]")
-            break
-
-        selected_option = menu_entries[selected_index]
-
-        if selected_option == "Add a new task":
-            description = Prompt.ask("Enter task description")
-            task = add_task(description)
-            console.print(f"[green]Added task: '{task.description}' with ID {task.id}[/green]")
-        elif selected_option == "List all tasks":
-            # Tasks are already displayed at the beginning of the loop
-            pass
-        elif selected_option == "Update a task":
-            try:
-                task_id = IntPrompt.ask("Enter task ID to update")
-            except ValueError:
-                console.print("[red]Error: Task ID must be an integer.[/red]")
-                continue
-            new_description = Prompt.ask("Enter new description")
-            task = update_task(task_id, new_description)
-            if task:
-                console.print(f"[green]Updated task {task_id} to: '{task.description}'[/green]")
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "add_task_button":
+            description_input = self.query_one("#add_description_input", Input)
+            description = description_input.value
+            if description:
+                add_task(description)
+                self.app.pop_screen()
+                self.app.query_one(TaskListDisplay).update_tasks()
             else:
-                console.print(f"[red]Error: Task with ID {task_id} not found.[/red]")
-        elif selected_option == "Mark a task as complete":
+                self.query_one(".title", Static).update("Add New Task [red]Description cannot be empty[/red]")
+        elif event.button.id == "cancel_button":
+            self.app.pop_screen()
+
+class UpdateTaskScreen(Screen):
+    def compose(self) -> ComposeResult:
+        yield Vertical(
+            Static("Update Task", classes="title"),
+            Input(placeholder="Task ID", id="update_id_input"),
+            Input(placeholder="New description", id="update_description_input"),
+            Button("Update", variant="primary", id="update_task_button"),
+            Button("Cancel", variant="default", id="cancel_button")
+        )
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "update_task_button":
+            task_id_input = self.query_one("#update_id_input", Input)
+            description_input = self.query_one("#update_description_input", Input)
             try:
-                task_id = IntPrompt.ask("Enter task ID to complete")
-            except ValueError:
-                console.print("[red]Error: Task ID must be an integer.[/red]")
-                continue
-            task = complete_task(task_id)
-            if task:
-                console.print(f"[green]Completed task {task_id}: '{task.description}'[/green]")
-            else:
-                console.print(f"[red]Error: Task with ID {task_id} not found.[/red]")
-        elif selected_option == "Delete a task":
-            try:
-                task_id = IntPrompt.ask("Enter task ID to delete")
-            except ValueError:
-                console.print("[red]Error: Task ID must be an integer.[/red]")
-                continue
-            if confirm_delete(task_id):
-                if delete_task(task_id):
-                    console.print(f"[green]Deleted task {task_id}.[/green]")
+                task_id = int(task_id_input.value)
+                new_description = description_input.value
+                if new_description:
+                    task = update_task(task_id, new_description)
+                    if task:
+                        self.app.pop_screen()
+                        self.app.query_one(TaskListDisplay).update_tasks()
+                    else:
+                        self.query_one(".title", Static).update(f"Update Task [red]Task with ID {task_id} not found[/red]")
                 else:
-                    console.print(f"[red]Error: Task with ID {task_id} not found.[/red]")
-            else:
-                console.print(f"[yellow]Deletion of task {task_id} cancelled.[/yellow]")
-        elif selected_option == "Show help":
-            display_help()
-        elif selected_option == "Exit application":
-            console.print("[blue]Exiting application. Goodbye![/blue]")
-            break
+                    self.query_one(".title", Static).update("Update Task [red]Description cannot be empty[/red]")
+            except ValueError:
+                self.query_one(".title", Static).update("Update Task [red]Task ID must be an integer[/red]")
+        elif event.button.id == "cancel_button":
+            self.app.pop_screen()
 
-def main():
-    """Main entry point for the CLI application."""
-    if len(sys.argv) > 1:
-        # Non-interactive mode (for backward compatibility or scripting)
-        command = sys.argv[1]
-        if command == "add":
-            if len(sys.argv) < 3:
-                console.print("[yellow]Usage: python app.py add <description>[/yellow]")
-                return
-            description = " ".join(sys.argv[2:])
-            task = add_task(description)
-            console.print(f"[green]Added task: '{task.description}' with ID {task.id}[/green]")
-        elif command == "list":
-            tasks = list_tasks()
-            display_tasks(tasks)
-        elif command == "update":
-            if len(sys.argv) < 4:
-                console.print("[yellow]Usage: python app.py update <id> <new-description>[/yellow]")
-                return
+class CompleteTaskScreen(Screen):
+    def compose(self) -> ComposeResult:
+        yield Vertical(
+            Static("Complete Task", classes="title"),
+            Input(placeholder="Task ID", id="complete_id_input"),
+            Button("Complete", variant="primary", id="complete_task_button"),
+            Button("Cancel", variant="default", id="cancel_button")
+        )
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "complete_task_button":
+            task_id_input = self.query_one("#complete_id_input", Input)
             try:
-                task_id = int(sys.argv[2])
-            except ValueError:
-                console.print("[red]Error: Task ID must be an integer.[/red]")
-                return
-            new_description = " ".join(sys.argv[3:])
-            task = update_task(task_id, new_description)
-            if task:
-                console.print(f"[green]Updated task {task_id} to: '{task.description}'[/green]")
-            else:
-                console.print(f"[red]Error: Task with ID {task_id} not found.[/red]")
-        elif command == "complete":
-            if len(sys.argv) < 3:
-                console.print("[yellow]Usage: python app.py complete <id>[/yellow]")
-                return
-            try:
-                task_id = int(sys.argv[2])
-            except ValueError:
-                console.print("[red]Error: Task ID must be an integer.[/red]")
-                return
-            task = complete_task(task_id)
-            if task:
-                console.print(f"[green]Completed task {task_id}: '{task.description}'[/green]")
-            else:
-                console.print(f"[red]Error: Task with ID {task_id} not found.[/red]")
-        elif command == "delete":
-            if len(sys.argv) < 3:
-                console.print("[yellow]Usage: python app.py delete <id>[/yellow]")
-                return
-            try:
-                task_id = int(sys.argv[2])
-            except ValueError:
-                console.print("[red]Error: Task ID must be an integer.[/red]")
-                return
-            if confirm_delete(task_id):
-                if delete_task(task_id):
-                    console.print(f"[green]Deleted task {task_id}.[/green]")
+                task_id = int(task_id_input.value)
+                task = complete_task(task_id)
+                if task:
+                    self.app.pop_screen()
+                    self.app.query_one(TaskListDisplay).update_tasks()
                 else:
-                    console.print(f"[red]Error: Task with ID {task_id} not found.[/red]")
-            else:
-                console.print(f"[yellow]Deletion of task {task_id} cancelled.[/yellow]")
-        elif command == "help":
-            display_help()
-        else:
-            console.print(f"[red]Unknown command: {command}[/red]")
-    else:
-        # Interactive mode
-        interactive_mode()
+                    self.query_one(".title", Static).update(f"Complete Task [red]Task with ID {task_id} not found[/red]")
+            except ValueError:
+                self.query_one(".title", Static).update("Complete Task [red]Task ID must be an integer[/red]")
+        elif event.button.id == "cancel_button":
+            self.app.pop_screen()
+
+class DeleteTaskScreen(Screen):
+    def compose(self) -> ComposeResult:
+        yield Vertical(
+            Static("Delete Task", classes="title"),
+            Input(placeholder="Task ID", id="delete_id_input"),
+            Button("Delete", variant="error", id="delete_task_button"),
+            Button("Cancel", variant="default", id="cancel_button")
+        )
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "delete_task_button":
+            task_id_input = self.query_one("#delete_id_input", Input)
+            try:
+                task_id = int(task_id_input.value)
+                if confirm_delete(task_id): # This will still use rich.prompt.Confirm
+                    if delete_task(task_id):
+                        self.app.pop_screen()
+                        self.app.query_one(TaskListDisplay).update_tasks()
+                    else:
+                        self.query_one(".title", Static).update(f"Delete Task [red]Task with ID {task_id} not found[/red]")
+                else:
+                    self.query_one(".title", Static).update(f"Delete Task [yellow]Deletion of task {task_id} cancelled[/yellow]")
+            except ValueError:
+                self.query_one(".title", Static).update("Delete Task [red]Task ID must be an integer[/red]")
+        elif event.button.id == "cancel_button":
+            self.app.pop_screen()
+
+class HelpScreen(Screen):
+    def compose(self) -> ComposeResult:
+        help_message = """
+Commands:
+  a - Add a new task
+  l - List all tasks
+  u - Update a task
+  c - Mark a task as complete
+  d - Delete a task
+  h - Show this help message
+  q - Quit application
+"""
+        yield Vertical(
+            Static("Help", classes="title"),
+            Static(help_message),
+            Button("Back", variant="primary", id="back_button")
+        )
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "back_button":
+            self.app.pop_screen()
 
 if __name__ == "__main__":
-    main()
+    app = TodoApp()
+    app.run()
