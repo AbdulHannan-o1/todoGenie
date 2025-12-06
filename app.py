@@ -12,13 +12,11 @@ from utils import console, confirm_delete # console will be replaced by self.app
 
 class TodoBanner(Static):
     """A widget to display the TODOGENIE banner."""
-    def compose(self) -> ComposeResult:
-        yield Static(
-            Panel(
-                Text("TODOGENIE", justify="center", style="bold green"),
-                style="bold blue",
-                width=self.app.console.width
-            )
+    def render(self) -> Panel:
+        return Panel(
+            Text("TODOGENIE", justify="center", style="bold green"),
+            style="bold blue",
+            width=self.app.console.width
         )
 
 class TaskListDisplay(Static):
@@ -38,7 +36,7 @@ class TaskListDisplay(Static):
                 table.add_row(str(task.id), task.description, task.status)
             self.update(table)
         else:
-            self.update(Text("--- [yellow]No tasks yet. Add one![/yellow] ---", justify="center"))
+            self.update(Text("--- [yellow]No tasks yet. Add one![/yellow] ---", justify="center", markup=True))
 
 class TodoApp(App):
     """Our TUI Todo Application."""
@@ -57,7 +55,23 @@ class TodoApp(App):
         """Create child widgets for the app."""
         yield Header()
         yield TodoBanner()
-        yield TaskListDisplay()
+        yield Vertical(
+            TaskListDisplay(),
+            Static(
+                Text(
+                    "\n[bold blue]--- Menu ---[/bold blue]\n"
+                    "[green]a[/green] - Add Task\n"
+                    "[green]l[/green] - List Tasks\n"
+                    "[green]u[/green] - Update Task\n"
+                    "[green]c[/green] - Complete Task\n"
+                    "[green]d[/green] - Delete Task\n"
+                    "[green]h[/green] - Show Help\n"
+                    "[green]q[/green] - Quit\n"
+                    "[bold blue]------------[/bold blue]",
+                    markup=True
+                )
+            )
+        )
         yield Footer()
 
     def action_add_task_prompt(self) -> None:
