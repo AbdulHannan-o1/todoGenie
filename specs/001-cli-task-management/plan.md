@@ -70,3 +70,26 @@ The `app.py` will be refactored to become a `Textual` application. This involves
 -   More responsive and intuitive user experience.
 -   Improved code organization and maintainability for the UI layer.
 -   Foundation for future advanced TUI features.
+
+## 10. UI Enhancements (Textual)
+
+This section details further enhancements to the TUI application, focusing on improving user experience, interactivity, and visual appeal based on user feedback and best practices for `Textual` applications.
+
+### 10.1. Dynamic Status Messages
+
+To provide immediate and non-intrusive feedback to the user, a dedicated `StatusBar` widget will be implemented. This widget will display transient messages (e.g., "Task added successfully!", "Error: Task not found.") for a short duration, enhancing the application's responsiveness and user guidance.
+
+### 10.2. Interactive Task List (`DataTable`)
+
+The current static task list will be upgraded to a `textual.widgets.DataTable`. This change will significantly improve the interactivity and presentation of tasks by enabling:
+-   **Column Sorting**: Users will be able to sort tasks by various criteria (e.g., ID, description, status).
+-   **Row Selection**: Tasks can be selected, laying the groundwork for future features where selected tasks can be directly acted upon (e.g., pre-filling update forms).
+-   **Enhanced Visuals**: `DataTable` offers richer styling and layout options compared to a basic `rich.table.Table`.
+
+### 10.3. Custom CSS Styling
+
+To move beyond the default `Textual` appearance and create a more "interesting" and branded interface, a custom CSS file (`todo.css`) will be introduced. This file will define styles for:
+-   **Banner**: Custom fonts, colors, and background for the "TODOGENIE" banner.
+-   **Task List**: Styling for table headers, rows, and selected items.
+-   **Input Screens**: Consistent styling for input fields, buttons, and titles.
+-   **Overall Layout**: Adjustments to padding, margins, and borders for a polished look.

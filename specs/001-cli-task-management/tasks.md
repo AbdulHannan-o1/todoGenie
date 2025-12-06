@@ -110,3 +110,19 @@ The implementation will follow an MVP-first approach, starting with the core CRU
 - [X] T048 [TUI] Integrate command execution (add, update, delete, complete, help, exit) within the TUI event loop.
 - [X] T049 [TUI] Ensure smooth transitions and minimal flickering.
 - [X] T050 [TUI] Review and enhance color usage within the TUI framework.
+
+## Phase 15: UI Enhancements (Textual)
+
+### Dynamic Status Messages
+- [X] T055 [UI] Create a new `Static` widget (`StatusBar`) to display dynamic messages.
+- [X] T056 [UI] Integrate `StatusBar` into `TodoApp`'s layout.
+- [X] T057 [UI] Modify `action_` methods in `TodoApp` and `Screen`s to send messages to `StatusBar`.
+
+### Interactive Task List (`DataTable`)
+- [X] T058 [UI] Replace `TaskListDisplay` with `textual.widgets.DataTable`.
+- [X] T059 [UI] Adapt `update_tasks` logic to populate the `DataTable`.
+- [X] T060 [UI] Implement row selection in `DataTable` (for future features).
+
+### Custom CSS Styling
+- [X] T061 [UI] Create a `todo.css` file with basic styling for the banner, task list, and input screens.
+- [X] T062 [UI] Link `todo.css` to `TodoApp`.

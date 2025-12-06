@@ -1,11 +1,11 @@
 import sys
 from textual.app import App, ComposeResult
-from textual.widgets import Header, Footer, Button, Input, Static
+from textual.widgets import Header, Footer, Button, Input, Static, DataTable
 from textual.containers import Vertical, Horizontal, Container
 from textual.screen import Screen
 from rich.panel import Panel
 from rich.text import Text
-from rich.table import Table
+# from rich.table import Table # No longer needed
 
 from commands import add_task, list_tasks, update_task, complete_task, delete_task
 from utils import console, confirm_delete # console will be replaced by self.app.console
@@ -20,27 +20,35 @@ class TodoBanner(Static):
             padding=(1, 0) # Add vertical padding
         )
 
-class TaskListDisplay(Static):
+class TaskListDisplay(DataTable): # Inherit from DataTable
     """A widget to display the list of tasks."""
     def on_mount(self) -> None:
+        self.add_columns("ID", "Description", "Status") # Define columns
         self.update_tasks()
 
     def update_tasks(self) -> None:
+        self.clear() # Clear existing rows
         tasks = list_tasks()
         if tasks:
-            table = Table(title="Tasks", style="bold blue")
-            table.add_column("ID", style="cyan")
-            table.add_column("Description", style="magenta")
-            table.add_column("Status", style="green")
-
             for task in tasks:
-                table.add_row(str(task.id), task.description, task.status)
-            self.update(table)
+                self.add_row(str(task.id), task.description, task.status)
         else:
-            self.update(Text("--- [yellow]No tasks yet. Add one![/yellow] ---", justify="center"))
+            # Display a message if no tasks, DataTable doesn't have a direct "empty" state message
+            # We might need a separate Static for this or handle it in the parent compose
+            pass # For now, just clear the table
+
+class StatusBar(Static):
+    """A widget to display dynamic status messages."""
+    def on_mount(self) -> None:
+        self.update("Welcome to TodoGenie!")
+
+    def update_message(self, message: str, style: str = "none") -> None:
+        self.update(Text(message, style=style))
 
 class TodoApp(App):
     """Our TUI Todo Application."""
+
+    CSS_PATH = "todo.css" # Link CSS file
 
     BINDINGS = [
         ("a", "add_task_prompt", "Add Task"),
@@ -57,6 +65,7 @@ class TodoApp(App):
         yield Header()
         yield TodoBanner()
         yield TaskListDisplay() # Keep TaskListDisplay
+        yield StatusBar() # Integrate StatusBar
         yield Footer() # Footer will display key bindings
 
     def action_add_task_prompt(self) -> None:
@@ -80,6 +89,13 @@ class TodoApp(App):
     def action_quit_app(self) -> None:
         self.exit()
 
+    def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
+        """Called when a row is selected in the DataTable."""
+        row_key = event.row_key
+        row_data = self.query_one(DataTable).get_row(row_key)
+        self.query_one(StatusBar).update_message(f"Selected Task ID: {row_data[0]} - {row_data[1]}", style="blue")
+
+
 class AddTaskScreen(Screen):
     def compose(self) -> ComposeResult:
         yield Vertical(
@@ -97,6 +113,7 @@ class AddTaskScreen(Screen):
                 add_task(description)
                 self.app.pop_screen()
                 self.app.query_one(TaskListDisplay).update_tasks()
+                self.app.query_one(StatusBar).update_message(f"Added task: '{description}'", style="green")
             else:
                 self.query_one(".title", Static).update("Add New Task [red]Description cannot be empty[/red]")
         elif event.button.id == "cancel_button":
@@ -124,12 +141,16 @@ class UpdateTaskScreen(Screen):
                     if task:
                         self.app.pop_screen()
                         self.app.query_one(TaskListDisplay).update_tasks()
+                        self.app.query_one(StatusBar).update_message(f"Updated task {task_id} to: '{new_description}'", style="green")
                     else:
                         self.query_one(".title", Static).update(f"Update Task [red]Task with ID {task_id} not found[/red]")
+                        self.app.query_one(StatusBar).update_message(f"Error: Task with ID {task_id} not found.", style="red")
                 else:
                     self.query_one(".title", Static).update("Update Task [red]Description cannot be empty[/red]")
+                    self.app.query_one(StatusBar).update_message("Error: Description cannot be empty.", style="red")
             except ValueError:
                 self.query_one(".title", Static).update("Update Task [red]Task ID must be an integer[/red]")
+                self.app.query_one(StatusBar).update_message("Error: Task ID must be an integer.", style="red")
         elif event.button.id == "cancel_button":
             self.app.pop_screen()
 
@@ -151,10 +172,13 @@ class CompleteTaskScreen(Screen):
                 if task:
                     self.app.pop_screen()
                     self.app.query_one(TaskListDisplay).update_tasks()
+                    self.app.query_one(StatusBar).update_message(f"Completed task {task_id}: '{task.description}'", style="green")
                 else:
                     self.query_one(".title", Static).update(f"Complete Task [red]Task with ID {task_id} not found[/red]")
+                    self.app.query_one(StatusBar).update_message(f"Error: Task with ID {task_id} not found.", style="red")
             except ValueError:
                 self.query_one(".title", Static).update("Complete Task [red]Task ID must be an integer[/red]")
+                self.app.query_one(StatusBar).update_message("Error: Task ID must be an integer.", style="red")
         elif event.button.id == "cancel_button":
             self.app.pop_screen()
 
@@ -176,12 +200,16 @@ class DeleteTaskScreen(Screen):
                     if delete_task(task_id):
                         self.app.pop_screen()
                         self.app.query_one(TaskListDisplay).update_tasks()
+                        self.app.query_one(StatusBar).update_message(f"Deleted task {task_id}.", style="green")
                     else:
                         self.query_one(".title", Static).update(f"Delete Task [red]Task with ID {task_id} not found[/red]")
+                        self.app.query_one(StatusBar).update_message(f"Error: Task with ID {task_id} not found.", style="red")
                 else:
                     self.query_one(".title", Static).update(f"Delete Task [yellow]Deletion of task {task_id} cancelled[/yellow]")
+                    self.app.query_one(StatusBar).update_message(f"Deletion of task {task_id} cancelled.", style="yellow")
             except ValueError:
                 self.query_one(".title", Static).update("Delete Task [red]Task ID must be an integer[/red]")
+                self.app.query_one(StatusBar).update_message("Error: Task ID must be an integer.", style="red")
         elif event.button.id == "cancel_button":
             self.app.pop_screen()
 
