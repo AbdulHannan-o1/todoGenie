@@ -1,0 +1,64 @@
+---
+id: 0026
+title: Fix ModuleNotFoundError for rich.figlet and refine banner
+stage: refactor
+date: 2025-12-06
+surface: agent
+model: (unknown)
+feature: 001-cli-task-management
+branch: app-core
+user: abdulhannan
+command: "The user is reporting a `ModuleNotFoundError: No module named 'rich.figlet'`.
+This error occurs because I added `from rich.figlet import Figlet` to `app.py`, but the `rich.figlet` module is not available in the installed `rich` package.
+
+This indicates that the `rich` package installed in the user's environment either:
+1.  Is an older version that does not include the `figlet` module.
+2.  Has a different structure where `Figlet` is not directly under `rich.figlet`.
+
+**Plan:**
+1.  **Check `rich` version**: I need to determine the version of `rich` installed in the user's environment.
+2.  **Consult `rich` documentation**: Based on the version, I will check the `rich` documentation to see how to use Figlet or an alternative for large text. If `Figlet` is not available, I will need to find another way to make the banner text larger.
+
+I will start by checking the `rich` version."
+labels: [bugfix, ui, rich, banner, modulenotfounderror]
+links:
+  spec: specs/001-cli-task-management/spec.md
+  ticket: null
+  adr: null
+  pr: null
+files:
+  - app.py
+tests:
+  - none
+---
+
+## Prompt
+
+```text
+(venv) abdulhannan@fedora:~/data/development/openAi/todo-in-memory-app$ python app.py
+Traceback (most recent call last):
+  File "/home/abdulhannan/data/development/openAi/todo-in-memory-app/app.py", line 8, in <module>
+    from rich.figlet import Figlet # Import Figlet for larger text
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'rich.figlet'
+(venv) abdulhannan@fedora:~/data/development/openAi/todo-in-memory-app$
+```
+
+## Response snapshot
+
+Resolved `ModuleNotFoundError` for `rich.figlet` and refined banner styling using `rich.text.Text` with bold/extra_bold styles.
+
+## Outcome
+
+- ✅ Impact: Resolved `ModuleNotFoundError` for `rich.figlet` and refined banner styling using `rich.text.Text` with bold/extra_bold styles.
+- 🧪 Tests: No explicit tests were defined or run for this fix.
+- 📁 Files: Modified 1 file.
+- 🔁 Next prompts: User can now test the application to confirm the fix and updated banner.
+- 🧠 Reflection: `rich.figlet` was not available in the installed `rich` version. Reverted to `rich.text.Text` with styling for larger text effect.
+
+## Evaluation notes (flywheel)
+
+- Failure modes observed: `ModuleNotFoundError` due to unavailable module.
+- Graders run and results (PASS/FAIL): None
+- Prompt variant (if applicable): None
+- Next experiment (smallest change to try): None

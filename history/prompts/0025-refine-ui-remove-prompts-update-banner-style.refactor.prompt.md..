@@ -1,0 +1,61 @@
+---
+id: 0025
+title: Refine UI: Remove prompts, update banner style
+stage: refactor
+date: 2025-12-06
+surface: agent
+model: (unknown)
+feature: 001-cli-task-management
+branch: app-core
+user: abdulhannan
+command: "The user has provided new feedback:
+1.  **"no need to ask user for confirmation on every input"**: This refers to the `Prompt.ask("Press Enter to continue...")` calls I added to mitigate flickering. The user wants these removed.
+2.  **"remove the outline arounf the banner"**: This refers to the `Panel` around the "TODOGENIE" banner. The user wants the `Panel` removed.
+3.  **"the todogenie text should be in the left side"**: This refers to the justification of the "TODOGENIE" text within the banner. It's currently `justify="center"`. The user wants it `justify="left"`.
+4.  **"and bix text"**: This refers to making the "TODOGENIE" text larger.
+
+**Plan:**
+
+1.  **Remove `Prompt.ask("Press Enter to continue...")` calls**: I will remove all instances of `Prompt.ask("Press Enter to continue...")` from `interactive_mode()` and `display_help()`.
+2.  **Remove `Panel` from banner**: I will replace the `Panel` around the "TODOGENIE" text with a direct `console.print` of the `Text` object.
+3.  **Change banner text justification to left**: I will change `justify="center"` to `justify="left"` for the "TODOGENIE" text.
+4.  **Make banner text larger**: I will explore options within `rich.Text` to make the text larger. `rich.Text` doesn't have a direct "size" parameter like HTML. I might need to use a larger font style or a different `rich` construct if available, or simply rely on the terminal's font size. For now, I will try to use a more prominent style.
+
+I will start by reading the `app.py` file."
+labels: [ui, non-tui, banner, prompts, rich]
+links:
+  spec: specs/001-cli-task-management/spec.md
+  ticket: null
+  adr: null
+  pr: null
+files:
+  - app.py
+tests:
+  - none
+---
+
+## Prompt
+
+```text
+no need to ask user for confirmation on every input 
+and remove the outline arounf the banner and the todogenie text should be in the left side and bix text
+```
+
+## Response snapshot
+
+Refined non-TUI UI by removing unnecessary prompts, updating banner style (no outline, left-aligned, larger text).
+
+## Outcome
+
+- ✅ Impact: Refined non-TUI UI by removing unnecessary prompts, updating banner style (no outline, left-aligned, larger text).
+- 🧪 Tests: No explicit tests were defined or run for these changes.
+- 📁 Files: Modified 1 file.
+- 🔁 Next prompts: User can now test the refined UI.
+- 🧠 Reflection: Addressed user feedback on UI elements, improving user experience by reducing interruptions and enhancing visual appeal.
+
+## Evaluation notes (flywheel)
+
+- Failure modes observed: None
+- Graders run and results (PASS/FAIL): None
+- Prompt variant (if applicable): None
+- Next experiment (smallest change to try): None

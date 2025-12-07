@@ -1,0 +1,94 @@
+---
+id: 0017
+title: Fix MountError for rich.panel.Panel in TodoBanner
+stage: red
+date: 2025-12-06
+surface: agent
+model: (unknown)
+feature: 001-cli-task-management
+branch: app-core
+user: abdulhannan
+command: "The user is reporting a `MountError: Can't mount <class 'rich.panel.Panel'>; expected a Widget instance.`
+This error occurs in `app.py` within the `TodoBanner`'s `compose` method, specifically when yielding a `rich.panel.Panel`.
+
+The `Textual` framework expects `Widget` instances to be yielded from `compose` methods. While `rich.panel.Panel` is a `rich` renderable, it is not a `Textual` widget. `Textual` widgets are designed to be composed within the `Textual` application tree.
+
+To display `rich` renderables like `Panel` within `Textual`, they need to be wrapped inside a `Textual` widget that can render arbitrary `rich` content. The `Static` widget is suitable for this purpose.
+
+The `TodoBanner` class already inherits from `Static`, which is good. However, the `compose` method of `TodoBanner` is yielding a `rich.panel.Panel` directly. Instead, it should yield a `Static` widget that *contains* the `Panel`.
+
+**Plan:**
+*   **Task T052**: Modify the `TodoBanner`'s `compose` method in `app.py` to wrap the `rich.panel.Panel` within a `Textual` `Static` widget.
+
+I will read the `app.py` file first to confirm the current implementation of `TodoBanner`."
+labels: [bugfix, textual, mounterror]
+links:
+  spec: specs/001-cli-task-management/spec.md
+  ticket: null
+  adr: null
+  pr: null
+files:
+  - app.py
+tests:
+  - none
+---
+
+## Prompt
+
+```text
+(venv) abdulhannan@fedora:~/data/development/openAi/todo-in-memory-app$ python app.py
+╭───────────────────── Traceback (most recent call last) ──────────────────────╮
+│ /home/abdulhannan/data/development/openAi/todo-in-memory-app/venv/lib64/pyth │
+│ on3.13/site-packages/textual/widget.py:4638 in _compose                      │
+│                                                                              │
+│   4635 │                                                                     │
+│   4636 │   async def _compose(self) -> None:                                 │
+│   4637 │   │   try:                                                          │
+│ ❱ 4638 │   │   │   widgets = [*self._pending_children, *compose(self)]       │
+│   4639 │   │   │   self._pending_children.clear()                            │
+│   4640 │   │   except TypeError as error:                                    │
+│   4641 │   │   │   raise TypeError(                                          │
+│                                                                              │
+│ ╭───────────────────────────────── locals ─────────────────────────────────╮ │
+│ │ error = MountError("Can't mount <class 'rich.panel.Panel'>; expected a   │ │
+│ │         Widget instance.")                                               │ │
+│ │  self = TodoBanner()                                                     │ │
+│ ╰──────────────────────────────────────────────────────────────────────────╯ │
+│                                                                              │
+│ /home/abdulhannan/data/development/openAi/todo-in-memory-app/app.py:16 in    │
+│ compose                                                                      │
+│                                                                              │
+│    13 class TodoBanner(Static):                                              │
+│    14 │   """A widget to display the TODOGENIE banner."""                    │
+│    15 │   def compose(self) -> ComposeResult:                                │
+│ ❱  16 │   │   yield Panel(                                                   │
+│    17 │   │   │   Text("TODOGENIE", justify="center", style="bold green"),   │
+│    18 │   │   │   style="bold blue",                                         │
+│    19 │   │   │   width=self.app.console.width                               │
+│                                                                              │
+│ ╭────── locals ───────╮                                                      │
+│ │ self = TodoBanner() │                                                      │
+│ ╰─────────────────────╯                                                      │
+╰──────────────────────────────────────────────────────────────────────────────╯
+MountError: Can't mount <class 'rich.panel.Panel'>; expected a Widget instance.
+(venv) abdulhannan@fedora:~/data/development/openAi/todo-in-memory-app$ 
+```
+
+## Response snapshot
+
+Resolved `MountError` by wrapping `rich.panel.Panel` within a `Textual` `Static` widget in `TodoBanner`.
+
+## Outcome
+
+- ✅ Impact: Resolved `MountError` by wrapping `rich.panel.Panel` within a `Textual` `Static` widget in `TodoBanner`.
+- 🧪 Tests: No explicit tests were defined or run for this fix.
+- 📁 Files: Modified 1 file.
+- 🔁 Next prompts: User can now test the application to confirm the fix.
+- 🧠 Reflection: `Textual` `compose` methods expect `Textual` `Widget` instances, not raw `rich` renderables.
+
+## Evaluation notes (flywheel)
+
+- Failure modes observed: `MountError` due to incorrect widget composition.
+- Graders run and results (PASS/FAIL): None
+- Prompt variant (if applicable): None
+- Next experiment (smallest change to try): None

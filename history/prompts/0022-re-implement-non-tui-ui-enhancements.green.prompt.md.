@@ -1,0 +1,111 @@
+---
+id: 0022
+title: Re-implement non-TUI UI enhancements
+stage: green
+date: 2025-12-06
+surface: agent
+model: (unknown)
+feature: 001-cli-task-management
+branch: app-core
+user: abdulhannan
+command: "The user is reporting that the reverted application has several issues:
+1.  "list task option and help option are flickering"
+2.  "the table for task is not visible"
+3.  "the top bar the logo of todoGenie is not there"
+
+This indicates that the revert to commit `139de6a` was not entirely successful in restoring the desired state, or that the issues were present in that commit.
+
+Let's re-examine the state of `app.py` at commit `139de6a` and the issues reported.
+
+**Commit `139de6a` Analysis:**
+*   This commit was titled "fix: Resolve NameError for menu_entries".
+*   It was *before* the TUI integration, but also *before* some of the UI enhancements (like the banner and screen clearing) were fully stable.
+
+**Issues and Potential Causes:**
+
+1.  **"list task option and help option are flickering"**:
+    *   This was a known issue in the `simple-term-menu` interactive mode, which I tried to address in "Phase 13: UI Refresh" (T038, T039) by re-enabling `clear_screen=True` in `TerminalMenu` and adding `console.clear()` at the beginning of each loop iteration.
+    *   Since we reverted to a commit *before* these fixes were fully stable, it's expected that the flickering would return.
+
+2.  **"the table for task is not visible"**:
+    *   In the non-TUI interactive mode, the task table is displayed using `display_tasks(tasks)` from `utils.py`.
+    *   If it's not visible, it could be due to:
+        *   `tasks` being empty (no tasks added yet).
+        *   An issue with `display_tasks` function itself.
+        *   Screen clearing happening *after* the display.
+
+3.  **"the top bar the logo of todoGenie is not there"**:
+    *   The "TODOGENIE" banner was implemented in "Phase 12: UI Enhancements" (T034).
+    *   Since we reverted to a commit *before* this phase, the banner is indeed expected to be missing.
+
+**Conclusion:**
+The revert was successful in going back to a pre-TUI state, but that state itself had known UI issues that were later addressed in subsequent non-TUI enhancement phases. The user's feedback confirms these pre-existing issues.
+
+**Revised Plan:**
+
+Instead of trying to fix the issues in the reverted state, I should re-apply the non-TUI UI enhancements that were developed *after* commit `139de6a` but *before* the TUI integration.
+
+I need to find the commits that implemented:
+*   "Phase 12: UI Enhancements" (T034-T037)
+*   "Phase 13: UI Refresh" (T038-T039)
+
+Let's look at the `git log` again to identify these commits.
+
+```
+7e95af5 (HEAD -> app-core) feat: Implement UI Enhancements (Textual)                                                                                  
+67003e3 refactor: Revert explicit menu, enlarge banner, and provide UI recommendations                                                                
+66d9a70 fix: Resolve MountError, display menu, and render rich markup                                                                                 
+3c1bca7 fix: Resolve MountError for rich.panel.Panel in TodoBanner                                                                                    
+b8c5866 fix: Resolve ImportError for Container in app.py                                                                                              
+9cf4687 feat: Integrate Textual TUI Framework                                                                                                         
+139de6a fix: Resolve NameError for menu_entries                                                                                                       
+fb75ecd fix: Resolve TerminalMenu TypeError and implement arrow-key menu                                                                              
+3a3ff47 docs: Update README with interactive mode instructions                                                                                        
+0560280 feat: Implement Interactive CLI Mode                                                                                                          
+```
+
+From the log, the relevant commits are:
+*   `fb75ecd fix: Resolve TerminalMenu TypeError and implement arrow-key menu` (This might contain some UI fixes)
+*   `139de6a fix: Resolve NameError for menu_entries` (This is the commit I reverted to, which is too early)
+
+Let's try to find the commit that corresponds to the completion of "Phase 13: UI Refresh" (T039).
+
+I will look at the `git log` again, but this time I will search for keywords like "clear_screen" or "console.clear" in the commit messages or diffs to pinpoint the exact commit where these were introduced.
+
+I will start by searching the commit history."
+labels: [ui, non-tui, rich, simple-term-menu, enhancements]
+links:
+  spec: specs/001-cli-task-management/spec.md
+  ticket: null
+  adr: null
+  pr: null
+files:
+  - app.py
+tests:
+  - none
+---
+
+## Prompt
+
+```text
+the app reverted to the state where the list task option and help option are flekring and hte table for task is not visible and the tob bar the logo of todoGenie is not there
+```
+
+## Response snapshot
+
+Re-implemented non-TUI UI enhancements, including banner, screen clearing, conditional task display, and `rich` styling, addressing user-reported issues.
+
+## Outcome
+
+- ✅ Impact: Re-implemented non-TUI UI enhancements, including banner, screen clearing, conditional task display, and `rich` styling, addressing user-reported issues.
+- 🧪 Tests: No explicit tests were defined or run for these changes.
+- 📁 Files: Modified 1 file.
+- 🔁 Next prompts: User can now test the enhanced non-TUI application.
+- 🧠 Reflection: Successfully restored desired non-TUI UI features after TUI integration attempt.
+
+## Evaluation notes (flywheel)
+
+- Failure modes observed: None
+- Graders run and results (PASS/FAIL): None
+- Prompt variant (if applicable): None
+- Next experiment (smallest change to try): None
