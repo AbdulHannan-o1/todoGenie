@@ -1,10 +1,14 @@
 from storage import storage
-from spec import Task
+from models import Task, Priority # Import Priority
 from typing import List, Optional
+from rich.console import Console
+from rich.text import Text
 
-def add_task(description: str) -> Task:
-    """Adds a new task."""
-    return storage.add_task(description)
+console = Console()
+
+def add_task(title: str, description: str, priority: Priority) -> Task:
+    """Adds a new task with title, description, and optional priority."""
+    return storage.add_task(title, description, priority)
 
 def list_tasks() -> List[Task]:
     """Lists all tasks."""
