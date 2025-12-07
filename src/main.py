@@ -7,8 +7,8 @@ from rich.text import Text
 from rich.live import Live
 from pyfiglet import Figlet
 
-from commands import add_task, list_tasks, update_task, complete_task, delete_task
-from models import Priority, Task
+from .commands import add_task, list_tasks, update_task, complete_task, delete_task
+from .models import Priority, Task
 
 console = Console()
 
