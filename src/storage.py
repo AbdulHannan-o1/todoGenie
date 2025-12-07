@@ -1,5 +1,5 @@
 from typing import List, Optional
-from spec import Task
+from models import Task, Priority # Import Task and Priority from src.models
 
 class TaskStorage:
     """Manages the in-memory storage of tasks."""
@@ -7,9 +7,9 @@ class TaskStorage:
         self._tasks: List[Task] = []
         self._next_id = 1
 
-    def add_task(self, description: str) -> Task:
+    def add_task(self, title: str, description: str, priority: Priority) -> Task: # Modified signature
         """Adds a new task to the storage."""
-        task = Task(id=self._next_id, description=description)
+        task = Task(id=self._next_id, title=title, description=description, priority=priority) # Updated Task instantiation
         self._tasks.append(task)
         self._next_id += 1
         return task
@@ -36,7 +36,7 @@ class TaskStorage:
         """Marks a task as complete."""
         task = self.get_task_by_id(task_id)
         if task:
-            task.status = "completed"
+            task.status = "completed" # Set status to completed
         return task
 
     def delete_task(self, task_id: int) -> bool:
