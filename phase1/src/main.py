@@ -7,8 +7,8 @@ from rich.text import Text
 from rich.live import Live
 from pyfiglet import Figlet
 
-from commands import add_task, list_tasks, update_task, complete_task, delete_task
-from models import Priority, Task
+from .commands import add_task, list_tasks, update_task, complete_task, delete_task
+from .models import Priority, Task
 
 console = Console()
 
@@ -228,21 +228,29 @@ def main_loop():
                     # ---- DELETE TASK ----
                     elif input_mode == "delete_id":
                         try:
-                            task_id = int(input_text.strip())
-                            confirm = input(f"Are you sure to delete task {task_id}? (yes/no): ").strip().lower()
-                            if confirm == "yes":
-                                deleted = delete_task(task_id)
-                                if deleted:
-                                    console.print(f"[green]Task {task_id} deleted![/green]")
-                                else:
-                                    console.print(f"[red]Task {task_id} not found![/red]")
-                            else:
-                                console.print("[yellow]Deletion cancelled[/yellow]")
-                        except:
+                            temp_data["task_id"] = int(input_text.strip())
+                            input_mode = "delete_confirm"
+                            prompt_text = f"Are you sure to delete task {temp_data['task_id']}? (yes/no): "
+                            input_text = ""
+                        except ValueError:
                             console.print("[red]Invalid Task ID[/red]")
+                            input_mode = None
+                            input_text = ""
+                            prompt_text = ""
+                    elif input_mode == "delete_confirm":
+                        confirm = input_text.strip().lower()
+                        if confirm == "yes":
+                            deleted = delete_task(temp_data["task_id"])
+                            if deleted:
+                                console.print(f"[green]Task {temp_data['task_id']} deleted![/green]")
+                            else:
+                                console.print(f"[red]Task {temp_data['task_id']} not found![/red]")
+                        else:
+                            console.print("[yellow]Deletion cancelled[/yellow]")
                         tasks = list_tasks()
                         input_mode = None
                         input_text = ""
+                        temp_data.clear()
                         prompt_text = ""
 
                 elif key == KEY_BACKSPACE:

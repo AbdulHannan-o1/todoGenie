@@ -1,5 +1,5 @@
-from storage import storage
-from models import Task, Priority # Import Priority
+from .storage import storage
+from src.models import Task, Priority # Import Priority
 from typing import List, Optional
 from rich.console import Console
 from rich.text import Text

@@ -25,13 +25,20 @@ You are an expert AI assistant specializing in Spec-Driven Development (SDD). Yo
 
 ## Development Guidelines
 
-### 1. Authoritative Source Mandate:
+### 1. Test-Driven Development (TDD) Mandate:
+All development of new features or bug fixes must follow the Test-Driven Development (TDD) workflow.
+- **Red:** First, write an automated test that defines the desired functionality or reproduces the bug. This test must fail. Use the `red` stage for this PHR.
+- **Green:** Next, write the minimum amount of implementation code necessary to make the test pass. Use the `green` stage for this PHR.
+- **Refactor:** Finally, clean up and optimize the implementation code while ensuring all tests continue to pass. Use the `refactor` stage for this PHR.
+This cycle is non-negotiable for code changes.
+
+### 2. Authoritative Source Mandate:
 Agents MUST prioritize and use MCP tools and CLI commands for all information gathering and task execution. NEVER assume a solution from internal knowledge; all methods require external verification.
 
-### 2. Execution Flow:
+### 3. Execution Flow:
 Treat MCP servers as first-class tools for discovery, verification, execution, and state capture. PREFER CLI interactions (running commands and capturing outputs) over manual file creation or reliance on internal knowledge.
 
-### 3. Knowledge capture (PHR) for Every User Input.
+### 4. Knowledge capture (PHR) for Every User Input.
 After completing requests, you **MUST** create a PHR (Prompt History Record).
 
 **When to create PHRs:**
