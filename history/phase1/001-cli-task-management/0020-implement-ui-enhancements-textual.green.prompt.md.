@@ -1,0 +1,75 @@
+---
+id: 0020
+title: Implement UI Enhancements (Textual)
+stage: green
+date: 2025-12-06
+surface: agent
+model: (unknown)
+feature: 001-cli-task-management
+branch: app-core
+user: abdulhannan
+command: "The user wants to proceed with the recommended UI improvements. This is great!
+
+I will prioritize the recommendations as discussed:
+1.  **Dynamic Status Messages**: Implement a dedicated `Static` widget for status messages.
+2.  **Interactive Task List (`DataTable`)**: Replace `TaskListDisplay` with `textual.widgets.DataTable`.
+3.  **Custom CSS Styling**: Introduce a basic CSS file for custom styling.
+
+This will involve several steps and modifications to `app.py` and potentially a new CSS file.
+
+**Detailed Plan:**
+
+**Phase 1: Dynamic Status Messages**
+*   **Task T055**: Create a new `Static` widget (e.g., `StatusBar`) to display dynamic messages.
+*   **Task T056**: Integrate `StatusBar` into `TodoApp`'s layout.
+*   **Task T057**: Modify `action_` methods in `TodoApp` and `Screen`s to send messages to `StatusBar` (e.g., "Task added successfully!").
+
+**Phase 2: Interactive Task List (`DataTable`)**
+*   **Task T058**: Replace `TaskListDisplay` with `textual.widgets.DataTable`.
+*   **Task T059**: Adapt `update_tasks` logic to populate the `DataTable`.
+*   **Task T060**: Implement row selection in `DataTable` (if feasible and desired for future features).
+
+**Phase 3: Custom CSS Styling**
+*   **Task T061**: Create a `todo.css` file with basic styling for the banner, task list, and input screens.
+*   **Task T062**: Link `todo.css` to `TodoApp`.
+
+I will start by updating `tasks.md` with these new tasks."
+labels: [ui, textual, datatable, statusbar, css]
+links:
+  spec: specs/001-cli-task-management/spec.md
+  ticket: null
+  adr: null
+  pr: null
+files:
+  - app.py
+  - todo.css
+  - specs/001-cli-task-management/tasks.md
+  - specs/001-cli-task-management/plan.md
+tests:
+  - none
+---
+
+## Prompt
+
+```text
+go for the improvemt you just recommand upply them
+```
+
+## Response snapshot
+
+Implemented dynamic status messages, replaced static task list with `DataTable`, and introduced custom CSS styling, significantly enhancing the TUI's interactivity and visual appeal.
+
+## Outcome
+
+- ✅ Impact: Implemented dynamic status messages, replaced static task list with `DataTable`, and introduced custom CSS styling, significantly enhancing the TUI's interactivity and visual appeal.
+- 🧪 Tests: No explicit tests were defined or run for these enhancements.
+- 📁 Files: Modified 3 files, created 1 file.
+- 🔁 Next prompts: User can now test the enhanced TUI application.
+- 🧠 Reflection: Successfully applied recommended UI enhancements, making the application more interactive and visually appealing.
+
+## Evaluation notes (flywheel)
+
+- Failure modes observed: None
+- Graders run and results (PASS/FAIL): None
+- Prompt variant (if applicable): None
+- Next experiment (smallest change to try): None

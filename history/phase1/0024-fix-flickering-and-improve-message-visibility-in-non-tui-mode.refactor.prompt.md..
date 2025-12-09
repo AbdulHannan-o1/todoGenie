@@ -1,0 +1,91 @@
+---
+id: 0024
+title: Fix flickering and improve message visibility in non-TUI mode
+stage: refactor
+date: 2025-12-06
+surface: agent
+model: (unknown)
+feature: 001-cli-task-management
+branch: app-core
+user: abdulhannan
+command: "The user is providing feedback on the current state of the application after the last fix.
+
+Here's a breakdown of the user's requests:
+1.  **"selection is working fine"**: Good, this means `simple-term-menu` is functioning as expected.
+2.  **"there should be a TODOGENIE there when user start the application like when we start gemini cli it shows >GEMINI"**: This refers to the banner. I re-implemented the banner in the last step, so it *should* be there. The user's previous report was "the banner is also gone again". This discrepancy needs clarification.
+3.  **"there should be a list or table showing task if there any other wise not table"**: This refers to the conditional task display. I re-implemented this in the last step.
+4.  **"show help & list task is also not working show help and lsit task option just make the app blink of user select these"**: This refers to the flickering issue, specifically for "Show help" and "List all tasks" options. This was a known issue that I tried to address with `console.clear()` and `clear_screen=True`.
+5.  **"addd some colors"**: This refers to general styling and color usage. I added `rich` styling to the `console.print` statements in the last step.
+
+**Reconciling Discrepancies:**
+The user's report that the banner is gone and the app is blinking suggests that the `app.py` file they are running might *still* not be the latest version, despite my previous instructions. The `cat app.py` output they provided *did* show the banner code and the `default_menu_index` commented out.
+
+This is very confusing. It's possible the user is running the app in a way that doesn't reflect the changes, or there's some other environmental factor.
+
+However, I need to address the flickering and the user's perception of the banner/task list.
+
+**Addressing the "Blinking" (Flickering) Issue:**
+The flickering for "Show help" and "List all tasks" is a known challenge with `simple-term-menu` when combined with `console.clear()` and then printing additional content. The sequence of clearing the screen, printing tasks, printing the menu, and then potentially printing help/list output, can cause a flicker.
+
+The core problem is that `simple-term-menu` clears the screen *before* it draws its menu, and then my code clears the screen *before* drawing the banner and tasks. This double-clear, or clears at different times, can cause the blinking.
+
+**Proposed Solution for Flickering:**
+Instead of `console.clear()` at the beginning of the loop, and `clear_screen=True` in `TerminalMenu`, let's try to manage the screen clearing more explicitly and only once.
+
+1.  **Remove `clear_screen=True` from `TerminalMenu`**: Let my code handle the clearing.
+2.  **Keep `console.clear()` at the beginning of the loop**: This provides a clean slate for each iteration.
+3.  **Ensure all output is printed *after* the clear and *before* the menu is shown**: This is the current structure, but I need to verify the `display_help()` function.
+
+**Addressing the "TODOGENIE" Banner and Task List Visibility:**
+If the user is still not seeing these, it's a strong indication that the `app.py` they are running is not the one I modified. I will assume for now that the code *is* being run, and the user's perception is based on the flickering or other visual issues.
+
+**Addressing "Add some colors"**:
+I already added `rich` styling to the `console.print` statements. I will ensure these are correctly applied.
+
+**Revised Plan:**
+
+1.  **Remove `clear_screen=True` from `TerminalMenu`**: This will prevent `simple-term-menu` from doing its own clear, relying solely on `console.clear()` at the top of the loop. This might reduce flickering.
+2.  **Verify `display_help()` behavior**: Ensure `display_help()` prints its content and then the main loop continues, clearing the screen and redrawing.
+3.  **Re-confirm banner and conditional task display**: Ask the user to explicitly confirm if they see the banner and conditional task display after the flickering fix.
+
+I will start by modifying `app.py` to remove `clear_screen=True` from `TerminalMenu`."
+labels: [ui, non-tui, flickering, simple-term-menu, rich]
+links:
+  spec: specs/001-cli-task-management/spec.md
+  ticket: null
+  adr: null
+  pr: null
+files:
+  - app.py
+tests:
+  - none
+---
+
+## Prompt
+
+```text
+the selectio is woriking fine but the there some update i want to do 
+there should be a TODOGENIE there when user start the application like when we start gemini cli it shows >GEMINI
+there should be a list or table showing task if there any other wise not table 
+show help & list task  is also not working show help and lsit task option just make the app blink of user select these 
+addd some colors
+```
+
+## Response snapshot
+
+Mitigated flickering and improved message visibility in non-TUI mode by adjusting screen clearing and adding user prompts.
+
+## Outcome
+
+- ✅ Impact: Mitigated flickering and improved message visibility in non-TUI mode by adjusting screen clearing and adding user prompts.
+- 🧪 Tests: No explicit tests were defined or run for these changes.
+- 📁 Files: Modified 1 file.
+- 🔁 Next prompts: User can now test the application to confirm the flickering fix and improved message flow.
+- 🧠 Reflection: Addressed user feedback on flickering and message readability by carefully managing screen updates and user interaction pauses.
+
+## Evaluation notes (flywheel)
+
+- Failure modes observed: Flickering due to rapid screen clears, messages disappearing too quickly.
+- Graders run and results (PASS/FAIL): None
+- Prompt variant (if applicable): None
+- Next experiment (smallest change to try): None
