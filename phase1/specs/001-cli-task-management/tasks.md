@@ -96,3 +96,10 @@ The implementation will follow an MVP-first approach, starting with the core CRU
 
 - [X] T038 [UI] Re-enable `clear_screen=True` in `TerminalMenu` and move task display logic.
 - [X] T039 [UI] Add `console.clear()` at the beginning of each `while` loop iteration in `interactive_mode`.
+
+## Phase 14: Testing
+
+- [X] T040 [TEST] Set up `pytest` for unit testing.
+- [X] T041 [TEST] Write unit tests for `commands.py`.
+- [ ] T042 [TEST] Write unit tests for `storage.py`.
+- [ ] T043 [TEST] Write unit tests for `models.py`.
