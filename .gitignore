@@ -84,3 +84,6 @@ Thumbs.db
 # Other
 *.tmp
 *.swp
+
+# Node.js
+node_modules/
