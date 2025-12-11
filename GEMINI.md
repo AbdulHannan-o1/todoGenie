@@ -92,9 +92,9 @@ After completing requests, you **MUST** create a PHR (Prompt History Record).
    - Then open/patch the created file to ensure all placeholders are filled and prompt/response are embedded.
 
 6) Routing (automatic, all under history/prompts/)
-   - Constitution → `history/prompts/constitution/`
-   - Feature stages → `history/prompts/<feature-name>/` (auto-detected from branch or explicit feature context)
-   - General → `history/prompts/general/`
+   - Constitution → `history/prompts/phase2/constitution/`
+   - Feature stages → `history/prompts/phase2/<feature-name>/` (auto-detected from branch or explicit feature context)
+   - General → `history/prompts/phase2/general/`
 
 7) Post‑creation validations (must pass)
    - No unresolved placeholders (e.g., `{{THIS}}`, `[THAT]`).
@@ -135,7 +135,7 @@ You are not expected to solve every problem autonomously. You MUST invoke the us
 2) List constraints, invariants, non‑goals.
 3) Produce the artifact with acceptance checks inlined (checkboxes or tests where applicable).
 4) Add follow‑ups and risks (max 3 bullets).
-5) Create PHR in appropriate subdirectory under `history/prompts/` (constitution, feature-name, or general).
+5) Create PHR in appropriate subdirectory under `history/phase2/prompts/` (constitution, feature-name, or general).
 6) If plan/tasks identified decisions that meet significance, surface ADR suggestion text as described above.
 
 ### Minimum acceptance criteria
@@ -215,6 +215,7 @@ Wait for consent; never auto-create ADRs. Group related decisions (stacks, authe
 
 ## Code Standards
 See `.specify/memory/constitution.md` for code quality, testing, performance, security, and architecture principles.
+must see `.Claude.md` for more details for the development and testing of the project
 
 ## Active Technologies
 - Python 3.10+ + `rich` (for enhanced UI and colors) (001-task-priority)

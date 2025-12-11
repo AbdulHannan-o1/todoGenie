@@ -1,0 +1,126 @@
+---
+id: 0013
+title: Implement UI Refresh
+stage: refactor
+date: 2025-12-06
+surface: agent
+model: (unknown)
+feature: 001-cli-task-management
+branch: app-core
+user: abdulhannan
+command: "The user is pointing out that the entire UI (tasks and menu) is being redrawn after every action, leading to a cluttered output. They want the UI to *update* the existing display rather than re-printing everything.
+
+This is a common challenge in terminal UIs. `simple-term-menu` handles its own menu rendering, but the task list and other messages are printed directly to the console. When new content is printed, it pushes the old content up, creating the "re-printing" effect.
+
+To achieve an "update" effect, I would need to:
+1.  **Clear the relevant portion of the screen** before redrawing the tasks and menu.
+2.  **Control the cursor position** to redraw content in place.
+
+`rich` has some capabilities for this, particularly with `Live` displays, but integrating `Live` with `simple-term-menu` and managing the entire screen state within a `while True` loop can be complex. `simple-term-menu` itself has `clear_screen=True` which clears the *entire* screen before showing the menu, but the user previously asked to remove it to fix blinking. If `clear_screen=True` is re-enabled, it would clear everything, but then the task list would still be re-printed above the menu.
+
+A more robust solution for this kind of interactive, in-place updating often involves a full-fledged TUI (Terminal User Interface) library like `Textual` or `Prompt_toolkit` (which `rich` uses internally for some prompts). However, introducing a new TUI library would be a significant architectural change and a new dependency.
+
+Given the current setup with `rich` and `simple-term-menu`, the most straightforward way to reduce the "re-printing" effect without a major rewrite is to:
+1.  **Re-enable `clear_screen=True` in `TerminalMenu`**: This will clear the screen *before* the menu is displayed.
+2.  **Print the tasks *after* the screen is cleared but *before* the menu is shown**: This means moving the task display logic to just before `terminal_menu.show()`.
+3.  **Clear the screen *before* displaying the tasks and menu in each loop iteration**: This can be done using `console.clear()`.
+
+Let's try this approach. It won't be a perfect "in-place update" like a true TUI, but it will ensure that the screen is cleared before new content is drawn, making the output cleaner.
+
+**Plan:**
+*   **Task T038**: Re-enable `clear_screen=True` in `TerminalMenu` and move task display logic.
+*   **Task T039**: Add `console.clear()` at the beginning of each `while` loop iteration in `interactive_mode`.
+
+Let's start by updating `tasks.md` and `plan.md` to reflect these changes.
+
+First, I will read the `tasks.md` file."
+labels: [refactor, cli, interactive-mode, ui, refresh]
+links:
+  spec: specs/001-cli-task-management/spec.md
+  ticket: null
+  adr: null
+  pr: null
+files:
+  - app.py
+  - specs/001-cli-task-management/tasks.md
+  - specs/001-cli-task-management/plan.md
+tests:
+  - none
+---
+
+## Prompt
+
+```text
+every time i add or update or perform any action i print the entire app ui again it should update the the one it print when the application is startedevery time i add or update or perform any action i print the entire app ui again it should update the the one it print when the application is started
+here is what i an talking about 
+(venv) abdulhannan@fedora:~/data/development/openAi/todo-in-memory-app$ python app.py
+╭──────────────────────────────────────────────────────────────────────────────╮
+│                                  TODOGENIE                                   │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+--- No tasks yet. Add one! ---
+
+Enter task description: poolish the boots
+Added task: 'poolish the boots' with ID 1
+
+--- Current Tasks ---
+               Tasks                
+┏━━━━┳━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━┓
+┃ ID ┃ Description       ┃ Status  ┃
+┡━━━━╇━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━┩
+│ 1  │ poolish the boots │ pending │
+└────┴───────────────────┴─────────┘
+---------------------
+
+
+--- Current Tasks ---
+               Tasks                
+┏━━━━┳━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━┓
+┃ ID ┃ Description       ┃ Status  ┃
+┡━━━━╇━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━┩
+│ 1  │ poolish the boots │ pending │
+└────┴───────────────────┴─────────┘
+---------------------
+
+Enter task ID to update: 1
+Enter new description: poolish
+Updated task 1 to: 'poolish'
+
+--- Current Tasks ---
+            Tasks             
+┏━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━┓
+┃ ID ┃ Description ┃ Status  ┃
+┡━━━━╇━━━━━━━━━━━━━╇━━━━━━━━━┩
+│ 1  │ poolish     │ pending │
+└────┴───────────────────┴─────────┘
+---------------------
+
+Select an option:                                                               
+Select an option:                                                               
+> Add a new task                                                                
+  List all tasks                                                                
+  Update a task                                                                 
+  Mark a task as complete                                                       
+  Delete a task                                                                 
+  Show help                                                                     
+  Exit application
+```
+
+## Response snapshot
+
+Implemented UI refresh with screen clearing on each iteration, providing a cleaner interactive experience.
+
+## Outcome
+
+- ✅ Impact: Implemented UI refresh with screen clearing on each iteration, providing a cleaner interactive experience.
+- 🧪 Tests: No explicit tests were defined or run for these enhancements.
+- 📁 Files: Modified 3 files.
+- 🔁 Next prompts: User can now test the updated interactive application or request further enhancements.
+- 🧠 Reflection: Successfully addressed user feedback by implementing screen clearing and re-enabling `clear_screen` for a cleaner UI.
+
+## Evaluation notes (flywheel)
+
+- Failure modes observed: None
+- Graders run and results (PASS/FAIL): None
+- Prompt variant (if applicable): None
+- Next experiment (smallest change to try): None
