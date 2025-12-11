@@ -220,6 +220,8 @@ must see `.Claude.md` for more details for the development and testing of the pr
 ## Active Technologies
 - Python 3.10+ + `rich` (for enhanced UI and colors) (001-task-priority)
 - In-memory (001-task-priority)
+- Python 3.12+ + SQLModel, FastAPI (implied by backend structure), Alembic, Psycopg (001-db-models)
+- Neon Serverless PostgreSQL (001-db-models)
 
 ## Recent Changes
 - 001-task-priority: Added Python 3.10+ + `rich` (for enhanced UI and colors)
