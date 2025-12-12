@@ -1,0 +1,11 @@
+- [x] Implement basic FastAPI application structure.
+- [x] Define SQLModel for User and Task.
+- [x] Set up database connection and session management.
+- [x] Implement user authentication (registration, login, JWT token generation).
+- [x] Implement task creation, retrieval, update, and deletion.
+- [x] Implement task filtering, sorting, and searching.
+- [x] Implement task reminders and scheduling.
+- [x] Integrate `apscheduler` for background tasks.
+- [x] Add basic error handling.
+- [x] Add unit tests for models, services, and API endpoints.
+- [x] Ensure all tests pass.

@@ -1,0 +1,5 @@
+SQLModel
+fastapi
+alembic
+psycopg[binary]
+apscheduler
