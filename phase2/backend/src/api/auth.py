@@ -12,8 +12,13 @@ from backend.src.models.user import User
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 # Secret key to sign JWT tokens
-SECRET_KEY = "your-secret-key"  # TODO: Change this to a strong, random key loaded from environment variables
+SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key")  # Default for development
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
@@ -54,10 +59,20 @@ async def get_current_user(token: str = Depends(oauth2_scheme), session: Session
         raise credentials_exception
     return user
 
+from backend.src.schemas.user import UserCreate
+
 @router.post("/register", response_model=User)
-def register_user(user: User, session: Session = Depends(get_session)):
-    hashed_password = get_password_hash(user.password_hash)
-    user.password_hash = hashed_password
+def register_user(user_create: UserCreate, session: Session = Depends(get_session)):
+    """
+    Register a new user.
+    """
+    hashed_password = get_password_hash(user_create.password)
+    user = User(
+        username=user_create.username,
+        email=user_create.email,
+        password_hash=hashed_password,
+        role=user_create.role
+    )
     session.add(user)
     session.commit()
     session.refresh(user)
@@ -65,6 +80,9 @@ def register_user(user: User, session: Session = Depends(get_session)):
 
 @router.post("/token")
 def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), session: Session = Depends(get_session)):
+    """
+    Login for access token.
+    """
     user = session.query(User).filter(User.username == form_data.username).first()
     if not user or not verify_password(form_data.password, user.password_hash):
         raise HTTPException(

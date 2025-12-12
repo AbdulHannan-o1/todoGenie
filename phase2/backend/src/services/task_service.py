@@ -21,17 +21,17 @@ def create_task(session: Session, task_create: TaskCreate, created_at: Optional[
         session.add(task)
         session.commit()
         session.refresh(task)
-        logger.info(f"Task created: {task.id}")
+        logger.info(f"Task created: {task.id} for user: {task.user_id}")
         return task
     except Exception as e:
-        logger.error(f"Error creating task: {e}")
+        logger.error(f"Error creating task for user {task_create.user_id}: {e}")
         raise
 
 def get_task(session: Session, task_id: int) -> Optional[Task]:
     try:
         task = session.get(Task, task_id)
         if task:
-            logger.info(f"Task fetched: {task.id}")
+            logger.info(f"Task fetched: {task.id} for user: {task.user_id}")
         else:
             logger.warning(f"Task not found: {task_id}")
         return task
@@ -116,7 +116,7 @@ def update_task(session: Session, task_id: int, task_update: TaskUpdate) -> Opti
         session.add(task)
         session.commit()
         session.refresh(task)
-        logger.info(f"Task updated: {task.id}")
+        logger.info(f"Task updated: {task.id} for user: {task.user_id}")
 
         # Check if task was completed and has recurrence
         if old_status != "completed" and task.status == "completed" and task.recurrence:
@@ -136,7 +136,7 @@ def delete_task(session: Session, task_id: int) -> Optional[Task]:
             return None
         session.delete(task)
         session.commit()
-        logger.info(f"Task deleted: {task.id}")
+        logger.info(f"Task deleted: {task.id} for user: {task.user_id}")
         return task
     except Exception as e:
         logger.error(f"Error deleting task {task_id}: {e}")

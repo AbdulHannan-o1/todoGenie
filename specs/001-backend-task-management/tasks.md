@@ -112,8 +112,8 @@ The project will follow an MVP-first approach, delivering User Story 1 (Manage B
 
 **Goal**: Ensure the API is robust, well-documented, and ready for production use.
 
-- [ ] T036 [S] [Polish] Review and improve error handling and logging across the application.
-- [ ] T037 [S] [Polish] Add comprehensive API documentation using OpenAPI and Swagger UI.
-- [ ] T038 [S] [Polish] Perform a final security review of the authentication and authorization logic.
-- [ ] T039 [S] [Polish] Create a `README.md` with setup and deployment instructions.
+- [X] T036 [S] [Polish] Review and improve error handling and logging across the application.
+- [X] T037 [S] [Polish] Add comprehensive API documentation using OpenAPI and Swagger UI.
+- [X] T038 [S] [Polish] Perform a final security review of the authentication and authorization logic.
+- [X] T039 [S] [Polish] Create a `README.md` with setup and deployment instructions.
 - [ ] T040 [S] [Polish] Prepare a final pull request for review.

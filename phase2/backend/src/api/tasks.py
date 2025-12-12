@@ -18,6 +18,9 @@ def create_task(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
+    """
+    Create a new task.
+    """
     task = Task.from_orm(task_create)
     task.user_id = current_user.id
     crud_service = TaskCRUDService(session)
@@ -34,6 +37,9 @@ def list_tasks(
     sort_by: Optional[str] = Query("due_date", description="Sort by field (priority, due_date, alpha)"),
     sort_order: Optional[str] = Query("asc", description="Sort order (asc, desc)")
 ):
+    """
+    List all tasks for the current user, with optional filtering, searching, and sorting.
+    """
     query_service = TaskQueryService(session)
     return query_service.query_tasks(
         user_id=current_user.id,
@@ -51,6 +57,9 @@ def get_task(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
+    """
+    Get a specific task by its ID.
+    """
     crud_service = TaskCRUDService(session)
     task = crud_service.get_task(task_id)
     if not task or task.user_id != current_user.id:
@@ -64,6 +73,9 @@ def update_task(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
+    """
+    Update a specific task by its ID.
+    """
     crud_service = TaskCRUDService(session)
     task = crud_service.get_task(task_id)
     if not task or task.user_id != current_user.id:
@@ -78,6 +90,9 @@ def delete_task(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
+    """
+    Delete a specific task by its ID.
+    """
     crud_service = TaskCRUDService(session)
     task = crud_service.get_task(task_id)
     if not task or task.user_id != current_user.id:
@@ -92,6 +107,9 @@ def complete_task(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
+    """
+    Mark a specific task as complete.
+    """
     crud_service = TaskCRUDService(session)
     task = crud_service.get_task(task_id)
     if not task or task.user_id != current_user.id:
@@ -110,6 +128,9 @@ def create_reminder(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
+    """
+    Create a reminder for a specific task.
+    """
     crud_service = TaskCRUDService(session)
     task = crud_service.get_task(task_id)
     if not task or task.user_id != current_user.id:
