@@ -1,0 +1,334 @@
+openapi: 3.0.0
+info:
+  title: Backend Task Management API
+  version: 1.0.0
+  description: API for managing tasks, including CRUD operations, search, filter, sort, recurring tasks, and reminders.
+servers:
+  - url: /
+paths:
+  /tasks:
+    post:
+      summary: Create a new task
+      operationId: createTask
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskCreate'
+      responses:
+        '201':
+          description: Task created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    get:
+      summary: List all tasks with optional search, filter, and sort
+      operationId: listTasks
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Keyword to search in task title or description
+        - in: query
+          name: priority
+          schema:
+            type: string
+            enum: [low, medium, high]
+          description: Filter tasks by priority
+        - in: query
+          name: tag
+          schema:
+            type: string
+          description: Filter tasks by tag
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [pending, in progress, completed, archived, cancelled]
+          description: Filter tasks by status
+        - in: query
+          name: sort
+          schema:
+            type: string
+            enum: [priority, due_date, alpha]
+          description: Sort tasks by priority, due date, or alphabetically by title
+      responses:
+        '200':
+          description: A list of tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /tasks/{id}:
+    get:
+      summary: Get a single task by ID
+      operationId: getTaskById
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: ID of the task to retrieve
+      responses:
+        '200':
+          description: Task details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      summary: Update an existing task by ID
+      operationId: updateTask
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: ID of the task to update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskUpdate'
+      responses:
+        '200':
+          description: Task updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Delete a task by ID
+      operationId: deleteTask
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: ID of the task to delete
+      responses:
+        '204':
+          description: Task deleted successfully
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /tasks/{id}/complete:
+    patch:
+      summary: Mark a task as complete
+      operationId: completeTask
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: ID of the task to mark as complete
+      responses:
+        '200':
+          description: Task marked as complete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [pending, in progress, completed, archived, cancelled]
+        priority:
+          type: string
+          enum: [low, medium, high]
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+          nullable: true
+        due_date:
+          type: string
+          format: date-time
+          nullable: true
+        recurrence:
+          type: string
+          enum: [daily, weekly, monthly]
+          nullable: true
+        user_id:
+          type: string
+          format: uuid
+          readOnly: true
+      required:
+        - title
+        - status
+    TaskCreate:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        priority:
+          type: string
+          enum: [low, medium, high]
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+          nullable: true
+        due_date:
+          type: string
+          format: date-time
+          nullable: true
+        recurrence:
+          type: string
+          enum: [daily, weekly, monthly]
+          nullable: true
+      required:
+        - title
+    TaskUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [pending, in progress, completed, archived, cancelled]
+          nullable: true
+        priority:
+          type: string
+          enum: [low, medium, high]
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+          nullable: true
+        due_date:
+          type: string
+          format: date-time
+          nullable: true
+        recurrence:
+          type: string
+          enum: [daily, weekly, monthly]
+          nullable: true
+    Error:
+      type: object
+      properties:
+        detail:
+          type: string
