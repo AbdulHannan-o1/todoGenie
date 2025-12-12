@@ -2,8 +2,9 @@ from typing import List, Optional
 from datetime import datetime
 from sqlmodel import Session, select, asc, desc
 from sqlalchemy import case # Added this line
-from phase2.backend.src.models.task import Task, TaskCreate, TaskUpdate
-from phase2.backend.src.services.recurrence_service import generate_recurring_task_instance # Added this line
+from backend.src.models.task import Task
+from backend.src.schemas.task import TaskCreate, TaskUpdate
+from backend.src.services.recurrence_service import generate_recurring_task_instance # Added this line
 import logging
 
 logger = logging.getLogger(__name__)

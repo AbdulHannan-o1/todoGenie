@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta
 from typing import Optional
 from sqlmodel import Session
-from phase2.backend.src.models.task import Task, TaskCreate
+from backend.src.models.task import Task
+from backend.src.schemas.task import TaskCreate
 
 def generate_recurring_task_instance(session: Session, original_task: Task) -> Optional[Task]:
     if not original_task.recurrence:

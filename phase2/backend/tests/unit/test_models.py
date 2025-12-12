@@ -1,5 +1,6 @@
 from datetime import datetime, UTC
-from phase2.backend.src.models.task import Task, TaskCreate, TaskUpdate
+from backend.src.models.task import Task
+from backend.src.schemas.task import TaskCreate, TaskUpdate
 
 def test_create_task_model():
     task = Task(
@@ -25,6 +26,8 @@ def test_task_create_schema():
     )
     assert task_create.title == "New Task"
     assert task_create.user_id == 1
+    assert task_create.status == "pending"
+    assert task_create.priority == "medium"
 
 def test_task_update_schema():
     task_update = TaskUpdate(

@@ -7,7 +7,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlmodel import Session
 
-from backend.src.db import get_session
+from backend.db import get_session
 from backend.src.models.user import User
 
 router = APIRouter(prefix="/auth", tags=["auth"])

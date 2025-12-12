@@ -1,4 +1,5 @@
 SQLModel
 fastapi
 alembic
-psycopg[binary]apscheduler
+psycopg[binary]
+apscheduler

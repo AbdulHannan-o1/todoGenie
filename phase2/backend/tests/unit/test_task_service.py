@@ -2,8 +2,9 @@ from datetime import datetime, timedelta, UTC
 from typing import List
 import pytest
 from sqlmodel import Session, SQLModel, create_engine
-from phase2.backend.src.models.task import Task, TaskCreate, TaskUpdate
-from phase2.backend.src.services.task_service import create_task, get_task, get_tasks, update_task, delete_task
+from backend.src.models.task import Task
+from backend.src.schemas.task import TaskCreate, TaskUpdate
+from backend.src.services.task_service import create_task, get_task, get_tasks, update_task, delete_task
 
 # Setup a test database engine
 @pytest.fixture(name="session")

@@ -1,6 +1,6 @@
 from typing import List, Optional
-from datetime import datetime
-from pydantic import validator
+from datetime import datetime, UTC
+from pydantic import field_validator # Import field_validator
 from sqlmodel import Field, SQLModel
 
 class TaskBase(SQLModel):
@@ -12,25 +12,36 @@ class TaskBase(SQLModel):
     due_date: Optional[datetime] = None
     recurrence: Optional[str] = None # Enum: 'daily', 'weekly', 'monthly'
 
-    @validator('due_date')
-    def due_date_must_be_in_the_future(cls, v):
-        if v and v < datetime.now():
-            raise ValueError('due_date must be in the future')
+    @field_validator('due_date', mode='after')
+    def validate_due_date(cls, v):
+        if v:
+            # If v is offset-naive, assume UTC
+            if v.tzinfo is None:
+                v = v.replace(tzinfo=UTC)
+            if v < datetime.now(UTC):
+                raise ValueError('due_date must be in the future')
         return v
 
-    @validator('recurrence')
-    def recurrence_must_be_valid(cls, v):
+    @field_validator('recurrence', mode='after')
+    def validate_recurrence(cls, v):
         if v and v not in ['daily', 'weekly', 'monthly']:
             raise ValueError('recurrence must be one of "daily", "weekly", or "monthly"')
         return v
 
+class TaskCreate(TaskBase):
+    user_id: int
+
 class ReminderCreate(SQLModel):
     reminder_date: datetime
 
-    @validator('reminder_date')
-    def reminder_date_must_be_in_the_future(cls, v):
-        if v < datetime.now():
-            raise ValueError('reminder_date must be in the future')
+    @field_validator('reminder_date', mode='after')
+    def validate_reminder_date(cls, v):
+        if v:
+            # If v is offset-naive, assume UTC
+            if v.tzinfo is None:
+                v = v.replace(tzinfo=UTC)
+            if v < datetime.now(UTC):
+                raise ValueError('reminder_date must be in the future')
         return v
 
 class TaskUpdate(SQLModel):
@@ -42,14 +53,18 @@ class TaskUpdate(SQLModel):
     due_date: Optional[datetime] = None
     recurrence: Optional[str] = None
 
-    @validator('due_date')
-    def due_date_must_be_in_the_future(cls, v):
-        if v and v < datetime.now():
-            raise ValueError('due_date must be in the future')
+    @field_validator('due_date', mode='after')
+    def validate_due_date(cls, v):
+        if v:
+            # If v is offset-naive, assume UTC
+            if v.tzinfo is None:
+                v = v.replace(tzinfo=UTC)
+            if v < datetime.now(UTC):
+                raise ValueError('due_date must be in the future')
         return v
 
-    @validator('recurrence')
-    def recurrence_must_be_valid(cls, v):
+    @field_validator('recurrence', mode='after')
+    def validate_recurrence(cls, v):
         if v and v not in ['daily', 'weekly', 'monthly']:
             raise ValueError('recurrence must be one of "daily", "weekly", or "monthly"')
         return v

@@ -1,7 +1,7 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlmodel import Session
-from backend.src.db import get_session
+from backend.db import get_session
 from backend.src.models.task import Task
 from backend.src.schemas.task import TaskCreate, TaskUpdate, ReminderCreate
 from backend.src.services.reminder_service import ReminderService

@@ -22,7 +22,7 @@ def session_fixture() -> Generator[Session, None, None]:
 @pytest.fixture(name="client")
 def client_fixture(session: Session) -> TestClient:
     from backend.src.main import app
-    from backend.src.db import get_session
+    from backend.db import get_session
 
     def get_session_override():
         return session
