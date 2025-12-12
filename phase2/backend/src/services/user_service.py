@@ -1,20 +1,39 @@
-from typing import List
-from sqlmodel import Session, select
-from backend.src.models.task import Task
+from typing import Optional
+from sqlmodel import Session
+from backend.src.models.user import User
+from backend.src.api.auth import get_password_hash
 
-# Assuming a placeholder for a "deleted user" ID. In a real system, this would be a specific user ID
-# or a more sophisticated mechanism for archiving/reassigning.
-DELETED_USER_ID = 0 # Placeholder for a system-level "deleted user"
+class UserService:
+    def __init__(self, session: Session):
+        self.session = session
 
-def reassign_user_tasks_on_delete(session: Session, user_id: int) -> List[Task]:
-    """
-    Reassigns all tasks from a deleted user to a designated 'deleted user' ID.
-    In a more complex system, this might involve moving tasks to an archive,
-    or marking them with a specific flag.
-    """
-    tasks_to_reassign = session.exec(select(Task).where(Task.user_id == user_id)).all()
-    for task in tasks_to_reassign:
-        task.user_id = DELETED_USER_ID # Reassign to the placeholder deleted user ID
-        session.add(task)
-    session.commit()
-    return tasks_to_reassign
+    def create_user(self, user_create: User) -> User:
+        hashed_password = get_password_hash(user_create.password_hash)
+        user = User(
+            username=user_create.username,
+            email=user_create.email,
+            password_hash=hashed_password,
+            role=user_create.role
+        )
+        self.session.add(user)
+        self.session.commit()
+        self.session.refresh(user)
+        return user
+
+    def get_user_by_username(self, username: str) -> Optional[User]:
+        return self.session.query(User).filter(User.username == username).first()
+
+    def get_user_by_email(self, email: str) -> Optional[User]:
+        return self.session.query(User).filter(User.email == email).first()
+
+    def get_user_by_id(self, user_id: int) -> Optional[User]:
+        return self.session.query(User).filter(User.id == user_id).first()
+
+    def update_user_role(self, user_id: int, new_role: str) -> Optional[User]:
+        user = self.get_user_by_id(user_id)
+        if user:
+            user.role = new_role
+            self.session.add(user)
+            self.session.commit()
+            self.session.refresh(user)
+        return user
