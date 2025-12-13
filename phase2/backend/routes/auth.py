@@ -1,39 +1,52 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
-from sqlmodel import Session, select
-from datetime import timedelta
+from datetime import datetime, timedelta
+from typing import Optional
+from uuid import UUID
 
-from models import User
-from db import get_session
-from auth import create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
-from utils import verify_password, get_password_hash
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError, jwt
+from sqlmodel import Session, select, SQLModel
+from phase2.backend.models import User, Token, UserRead, UserCreate, UserLogin
+from phase2.backend.db import get_session
+
+from phase2.backend.config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 
 router = APIRouter()
 
-@router.post("/auth/register", response_model=User)
-def register_user(user: User, session: Session = Depends(get_session)):
-    db_user = session.exec(select(User).where(User.email == user.email)).first()
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+from phase2.backend.services.user_service import create_db_user, get_user_by_email
+
+@router.post("/register", response_model=UserRead)
+def register_user(user_create: UserCreate, session: Session = Depends(get_session)):
+    db_user = get_user_by_email(user_create.email, session)
     if db_user:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+        raise HTTPException(status_code=400, detail="Email already registered")
     
-    hashed_password = get_password_hash(user.hashed_password)
-    user.hashed_password = hashed_password
-    session.add(user)
-    session.commit()
-    session.refresh(user)
+    user = create_db_user({"email": user_create.email, "password": user_create.password}, session)
     return user
 
-@router.post("/auth/login")
-def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), session: Session = Depends(get_session)):
-    user = session.exec(select(User).where(User.email == form_data.username)).first()
-    if not user or not verify_password(form_data.password, user.hashed_password):
+@router.post("/login", response_model=Token)
+def login_for_access_token(user_login: UserLogin, session: Session = Depends(get_session)):
+    user = session.exec(select(User).where(User.email == user_login.email)).first()
+    if not user or not verify_password(user_login.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
+            detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": str(user.id)}, expires_delta=access_token_expires
+        data={"sub": user.email, "user_id": str(user.id)}, expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}

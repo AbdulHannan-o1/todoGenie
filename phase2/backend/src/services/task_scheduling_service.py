@@ -1,8 +1,8 @@
 from datetime import datetime, timedelta
 from typing import List
 from sqlmodel import Session
-from backend.src.models.task import Task
-from backend.src.services.task_crud_service import TaskCRUDService
+from phase2.backend.src.models import Task
+from phase2.backend.src.services.task_crud_service import TaskCRUDService
 
 class TaskSchedulingService:
     def __init__(self, session: Session):

@@ -2,19 +2,22 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from sqlmodel import SQLModel
-from backend.src.api.auth import router as auth_router, get_current_user
-from backend.src.api.tasks import router as tasks_router
-from backend.src.models.user import User
-from backend.db import engine, get_session
+from phase2.backend.src.api.auth import router as auth_router, get_current_user
+from phase2.backend.src.api.users import router as users_router
+from phase2.backend.src.api.tasks import router as tasks_router
+from phase2.backend.src.models import User
+from phase2.backend.src.db.session import get_session
+from phase2.backend.src.db.engine import engine
 from apscheduler.schedulers.background import BackgroundScheduler
-from backend.src.jobs.reminder_job import send_reminders
+from phase2.backend.src.jobs.reminder_job import send_reminders
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup logic
-    SQLModel.metadata.create_all(engine)
+    SQLModel.metadata.create_all(engine) # Ensure tables are created first
     scheduler = BackgroundScheduler()
-    scheduler.add_job(send_reminders, 'interval', minutes=1, args=[next(get_session())])
+    # Pass get_session as a callable so send_reminders can get a fresh session each time
+    scheduler.add_job(send_reminders, 'interval', minutes=1, args=[get_session])
     scheduler.start()
     app.state.scheduler = scheduler
     yield

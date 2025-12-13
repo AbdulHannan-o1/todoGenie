@@ -1,8 +1,23 @@
 from typing import Optional
-from sqlmodel import SQLModel
+from uuid import UUID
+from pydantic import BaseModel, EmailStr
 
-class UserCreate(SQLModel):
+class UserBase(BaseModel):
+    email: EmailStr
     username: str
-    email: str
+
+class UserCreate(UserBase):
     password: str
-    role: str = "user"
+
+class UserRead(UserBase):
+    id: UUID
+    is_active: bool
+
+    class Config:
+        orm_mode = True
+
+class UserUpdate(BaseModel):
+    email: Optional[EmailStr] = None
+    username: Optional[str] = None
+    password: Optional[str] = None
+    is_active: Optional[bool] = None

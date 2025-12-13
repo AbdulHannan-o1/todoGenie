@@ -1,18 +1,19 @@
 from datetime import datetime, UTC
-from backend.src.models.task import Task
-from backend.src.schemas.task import TaskCreate, TaskUpdate
+from phase2.backend.src.models import Task, User
+from phase2.backend.src.schemas.task import TaskCreate, TaskUpdate
+from uuid import UUID
 
 def test_create_task_model():
     task = Task(
         title="Test Task",
-        user_id=1,
+        user_id=UUID("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"),
         status="pending",
         priority="low",
-        tags=["work"],
+        tags="work",
         due_date=datetime.now(UTC)
     )
     assert task.title == "Test Task"
-    assert task.user_id == 1
+    assert task.user_id == UUID("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11")
     assert task.status == "pending"
     assert task.priority == "low"
     assert "work" in task.tags
@@ -20,12 +21,12 @@ def test_create_task_model():
 def test_task_create_schema():
     task_create = TaskCreate(
         title="New Task",
-        user_id=1,
+        user_id=UUID("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"),
         status="pending",
         priority="medium"
     )
     assert task_create.title == "New Task"
-    assert task_create.user_id == 1
+    assert task_create.user_id == UUID("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11")
     assert task_create.status == "pending"
     assert task_create.priority == "medium"
 
