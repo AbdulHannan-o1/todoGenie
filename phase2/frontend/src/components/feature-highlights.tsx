@@ -1,3 +1,6 @@
+// This component is no longer used in the new design
+// Kept for reference or future use if needed
+
 import { Bell, Layout, RefreshCcw } from "lucide-react";
 
 export default function FeatureHighlights() {

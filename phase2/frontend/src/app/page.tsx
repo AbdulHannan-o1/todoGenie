@@ -1,13 +1,17 @@
 import Hero from "../components/hero";
-import FeatureHighlights from "../components/feature-highlights";
-import StatsSection from "../components/stats-section";
+import FeatureSlider from "../components/feature-slider";
+import FeaturesSection from "../components/features-section";
+import CTASection from "../components/cta-section";
+import Footer from "../components/footer";
 
 export default function HomePage() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center">
+    <div className="flex min-h-screen flex-col">
       <Hero />
-      <FeatureHighlights />
-      <StatsSection />
+      <FeatureSlider />
+      <FeaturesSection />
+      <CTASection />
+      <Footer />
     </div>
   );
 }

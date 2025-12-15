@@ -4,18 +4,28 @@ import Link from "next/link";
 import { ModeToggle } from "../theme-toggle";
 import { Button } from "../ui/button";
 import { useAuth } from "@/context/auth-context";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
 
 export default function Header() {
   const { isAuthenticated, logout } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+
+  // Routes that should not show the header (they have their own navigation)
+  const hideHeaderRoutes = ['/dashboard', '/chat', '/tasks/new', '/tasks'];
+  const shouldHideHeader = pathname ? hideHeaderRoutes.some(route => pathname.startsWith(route)) : false;
 
   const handleLogout = () => {
     logout();
     toast.info("You have been logged out.");
     router.push("/login");
   };
+
+  // Don't render header on pages that have their own navigation system
+  if (shouldHideHeader) {
+    return null;
+  }
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background">

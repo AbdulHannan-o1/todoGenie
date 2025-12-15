@@ -1,3 +1,6 @@
+// This component is no longer used in the new design
+// Kept for reference or future use if needed
+
 export default function StatsSection() {
   return (
     <section className="w-full py-12 md:py-24 lg:py-32 border-t">
