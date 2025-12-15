@@ -1,0 +1,8 @@
+SQLModel
+fastapi
+alembic
+psycopg[binary]
+apscheduler
+python-dotenv
+python-jose[cryptography]
+passlib[bcrypt]
