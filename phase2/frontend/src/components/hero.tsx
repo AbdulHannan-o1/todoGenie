@@ -6,7 +6,7 @@ import { ArrowRight, Check, Sparkles } from 'lucide-react';
 
 export default function Hero() {
   return (
-    <section className="w-full py-12 md:py-24 lg:py-32 bg-gradient-to-b from-slate-900 to-slate-800">
+    <section className="w-full py-12 md:py-24 lg:py-32 bg-gradient-to-b from-slate-900 to-slate-800 flex items-center justify-center">
       <div className="container px-4 md:px-6">
         <div className="grid gap-6 lg:grid-cols-[1fr_1fr] lg:gap-12 items-center">
           <motion.div

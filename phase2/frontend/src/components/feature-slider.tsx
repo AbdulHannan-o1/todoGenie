@@ -53,7 +53,7 @@ const features = [
 
 export default function FeatureSlider() {
   return (
-    <section className="w-full py-12 md:py-24 lg:py-32 bg-slate-900">
+    <section className="w-full py-12 md:py-24 lg:py-32 bg-slate-900 flex items-center justify-center">
       <div className="container px-4 md:px-6">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-white mb-4">
@@ -71,14 +71,14 @@ export default function FeatureSlider() {
               return (
                 <div
                   key={`${index}-${feature.title}`}
-                  className="mx-4 flex-shrink-0 w-64 bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6 hover:bg-slate-800 transition-all duration-300"
+                  className="mx-3 flex-shrink-0 w-64 bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6 hover:bg-slate-800 transition-all duration-300"
                 >
                   <div className="flex flex-col items-center text-center">
                     <div className="p-3 bg-cyan-500/10 rounded-full mb-4">
                       <Icon className="h-6 w-6 text-cyan-400" />
                     </div>
-                    <h3 className="font-semibold text-white mb-2">{feature.title}</h3>
-                    <p className="text-sm text-slate-400">{feature.description}</p>
+                    <h3 className="font-semibold text-white mb-2 text-sm">{feature.title}</h3>
+                    <p className="text-xs text-slate-400 whitespace-normal">{feature.description}</p>
                   </div>
                 </div>
               );
@@ -99,7 +99,7 @@ export default function FeatureSlider() {
 
         .animate-scroll {
           display: flex;
-          animation: scroll 30s linear infinite;
+          animation: scroll 40s linear infinite;
         }
 
         .animate-scroll:hover {

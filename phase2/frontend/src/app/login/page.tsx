@@ -22,9 +22,20 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      const response = await apiClient.post("/auth/login", { email, password });
-      const { access_token, user_id, email: userEmail } = response.data; // Assuming backend returns user_id and email
-      authLogin(access_token, { id: user_id, email: userEmail });
+      // For OAuth2PasswordRequestForm, we need to send form data
+      const formData = new URLSearchParams();
+      formData.append('username', email);  // OAuth2 expects 'username' field (can be email)
+      formData.append('password', password);
+
+      const response = await apiClient.post("/auth/token", formData, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        }
+      });
+      const { access_token } = response.data;
+      // Note: The user details would typically be fetched separately using the token
+      // For now, we'll pass minimal user data and the auth context should handle the rest
+      authLogin(access_token, { id: null, email: email }); // We'll get user details separately
       toast.success("Logged in successfully!");
       router.push("/home"); // Redirect to home page after successful login
     } catch (error: any) {

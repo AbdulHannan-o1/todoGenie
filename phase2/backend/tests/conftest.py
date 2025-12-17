@@ -1,18 +1,23 @@
 import pytest
+import sys
+import os
 from typing import Generator
 from sqlmodel import Session, SQLModel
 from fastapi.testclient import TestClient
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 
+# Add the backend directory to the Python path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
 # Import your models here to ensure they are registered with SQLModel.metadata
-from phase2.backend.src.models import User, Task
-from phase2.backend.src.db.session import get_session
-from phase2.backend.src.db.engine import create_db_engine, set_test_engine # Import create_db_engine and set_test_engine
+from src.models import User, Task
+from src.db.session import get_session
+from src.db.engine import create_db_engine, set_test_engine # Import create_db_engine and set_test_engine
 
 # Import router creation functions
-from phase2.backend.src.api.auth import create_auth_router
-from phase2.backend.src.api.tasks import create_tasks_router
+from src.api.auth import create_auth_router
+from src.api.tasks import create_tasks_router
 
 @pytest.fixture(name="session")
 def session_fixture() -> Generator[Session, None, None]:

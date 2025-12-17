@@ -208,3 +208,9 @@ Wait for consent; never auto-create ADRs. Group related decisions (stacks, authe
 
 ## Code Standards
 See `.specify/memory/constitution.md` for code quality, testing, performance, security, and architecture principles.
+- use the availible agents and skill to implement the ui changes
+- after completion of frontend changes integrate both backend intofrontend
+fist check how bakcend works for full contenxt and frontend and backend integration to avoid unnecessory errors and backend integration issues
+- start the database container as metioned in quicjstart.ms under web-init apecs
+- match the requirment as mentioned in the hackthon document
+- make sure to use better-auth for authentication as mentioned it the document

@@ -1,11 +1,11 @@
 from typing import List, Optional
 from uuid import UUID
 from sqlmodel import Session, select
-from phase2.backend.src.db.session import get_session
-from phase2.backend.src.models import Task, User
-from phase2.backend.src.schemas.task import TaskCreate, TaskUpdate
-from phase2.backend.src.services.task_crud_service import TaskCRUDService
-from phase2.backend.src.services.task_query_service import TaskQueryService
+from ..db.session import get_session
+from ..models import Task, User
+from ..schemas.task import TaskCreate, TaskUpdate
+from .task_crud_service import TaskCRUDService
+from .task_query_service import TaskQueryService
 
 
 def create_task(session: Session, task_create: TaskCreate, user_id: UUID) -> Task:
@@ -25,6 +25,9 @@ def update_task(session: Session, task_id: UUID, task_update: TaskUpdate) -> Opt
     crud_service = TaskCRUDService(session)
     return crud_service.update_task(task_id, task_update)
 
-def delete_task(session: Session, task_id: UUID) -> bool:
+def delete_task(session: Session, task_id: UUID) -> Optional[Task]:
     crud_service = TaskCRUDService(session)
-    return crud_service.delete_task(task_id)
+    task = crud_service.get_task(task_id)  # Get the task before deletion
+    if task and crud_service.delete_task(task_id):
+        return task  # Return the deleted task
+    return None

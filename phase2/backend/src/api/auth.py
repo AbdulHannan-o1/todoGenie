@@ -7,19 +7,19 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlmodel import Session
 
-from phase2.backend.src.db.session import get_session
-from phase2.backend.src.services.user_service import get_user_by_email
-from phase2.backend.src.services.auth_service import create_user_access_token, authenticate_user
-from phase2.backend.src.schemas.auth import Token
-from phase2.backend.src.schemas.user import UserCreate, UserRead
-from phase2.backend.src.services.user_service import create_user as create_user_service
-from phase2.backend.src.models import User
-from phase2.backend.src.auth import get_current_user, get_password_hash
-from phase2.backend.src.utils.hash import verify_password
-from phase2.backend.src.config import settings
+from ..db.session import get_session
+from ..services.user_service import get_user_by_email
+from ..services.auth_service import create_user_access_token, authenticate_user
+from ..schemas.auth import Token
+from ..schemas.user import UserCreate, UserRead
+from ..services.user_service import create_user as create_user_service
+from ..models import User
+from ..auth import get_current_user, get_password_hash
+from ..utils.hash import verify_password
+from ..config import settings
 
 def create_auth_router() -> APIRouter:
-    router = APIRouter(prefix="/auth", tags=["auth"])
+    router = APIRouter(prefix="/api/auth", tags=["auth"])
 
     @router.post("/register", response_model=UserRead)
     def register_user(user_create: UserCreate, session: Session = Depends(get_session)):
@@ -37,7 +37,7 @@ def create_auth_router() -> APIRouter:
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect username or password",
+                detail="Incorrect email or password",
                 headers={"WWW-Authenticate": "Bearer"},
             )
         access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)

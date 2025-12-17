@@ -9,12 +9,13 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str
 
+from pydantic import ConfigDict
+
 class UserRead(UserBase):
     id: UUID
-    is_active: bool
+    status: str
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None

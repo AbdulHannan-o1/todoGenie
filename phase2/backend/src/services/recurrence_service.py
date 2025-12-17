@@ -1,8 +1,8 @@
 from datetime import datetime, timedelta
 from typing import Optional
 from sqlmodel import Session
-from phase2.backend.src.models import Task
-from phase2.backend.src.schemas.task import TaskCreate
+from ..models import Task
+from ..schemas.task import TaskCreate
 import logging
 
 logger = logging.getLogger(__name__)

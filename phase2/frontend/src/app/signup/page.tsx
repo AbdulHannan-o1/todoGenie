@@ -14,6 +14,7 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [username, setUsername] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -37,8 +38,8 @@ export default function SignupPage() {
     try {
       await apiClient.post("/auth/register", {
         email,
-        password,
-        name: fullName
+        username, // Send username instead of name
+        password
       });
       toast.success("Registration successful! Please log in.");
       router.push("/login"); // Redirect to login page after successful registration
@@ -70,6 +71,19 @@ export default function SignupPage() {
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
+                className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="username" className="text-slate-300">Username</Label>
+              <Input
+                id="username"
+                type="text"
+                placeholder="johndoe"
+                required
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
               />
             </div>
