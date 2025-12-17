@@ -1,6 +1,6 @@
 from fastapi import Depends, HTTPException, status
-from backend.src.api.auth import get_current_user
-from backend.src.models.user import User
+from phase2.backend.src.api.auth import get_current_user
+from phase2.backend.src.models import User
 
 def role_required(required_role: str):
     def role_checker(current_user: User = Depends(get_current_user)):

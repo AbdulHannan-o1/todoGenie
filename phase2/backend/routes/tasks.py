@@ -1,54 +1,77 @@
+from typing import List
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
-from typing import List
-import uuid
 
-from models import Task, User
-from db import get_session
-from auth import get_current_user
+from phase2.backend.db import get_session
+from phase2.backend.models import Task, TaskCreate, TaskUpdate
+from phase2.backend.auth_utils import get_current_user, TokenData
 
 router = APIRouter()
 
-@router.post("/api/tasks", response_model=Task)
-def create_task(task: Task, current_user_id: uuid.UUID = Depends(get_current_user), session: Session = Depends(get_session)):
-    task.user_id = current_user_id
+@router.post("/", response_model=Task)
+def create_task(
+    task_create: TaskCreate,
+    current_user: TokenData = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    task = Task(user_id=UUID(current_user.user_id), **task_create.dict())
     session.add(task)
     session.commit()
     session.refresh(task)
     return task
 
-@router.get("/api/tasks", response_model=List[Task])
-def get_tasks(current_user_id: uuid.UUID = Depends(get_current_user), session: Session = Depends(get_session)):
-    tasks = session.exec(select(Task).where(Task.user_id == current_user_id)).all()
+@router.get("/", response_model=List[Task])
+def read_tasks(
+    current_user: TokenData = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    tasks = session.exec(select(Task).where(Task.user_id == UUID(current_user.user_id))).all()
     return tasks
 
-@router.get("/api/tasks/{task_id}", response_model=Task)
-def get_task(task_id: int, current_user_id: uuid.UUID = Depends(get_current_user), session: Session = Depends(get_session)):
-    task = session.exec(select(Task).where(Task.id == task_id, Task.user_id == current_user_id)).first()
+@router.get("/{task_id}", response_model=Task)
+def read_task(
+    task_id: int,
+    current_user: TokenData = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    task = session.exec(select(Task).where(Task.id == task_id, Task.user_id == UUID(current_user.user_id))).first()
     if not task:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+        raise HTTPException(status_code=404, detail="Task not found or not owned by user")
     return task
 
-@router.put("/api/tasks/{task_id}", response_model=Task)
-def update_task(task_id: int, task_update: Task, current_user_id: uuid.UUID = Depends(get_current_user), session: Session = Depends(get_session)):
-    task = session.exec(select(Task).where(Task.id == task_id, Task.user_id == current_user_id)).first()
+@router.put("/{task_id}", response_model=Task)
+def update_task(
+    task_id: int,
+    task_update: TaskUpdate,
+    current_user: TokenData = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    task = session.exec(select(Task).where(Task.id == task_id, Task.user_id == UUID(current_user.user_id))).first()
     if not task:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
-    
-    task.title = task_update.title
-    task.description = task_update.description
-    task.completed = task_update.completed
+        raise HTTPException(status_code=404, detail="Task not found or not owned by user")
+
+    task_data = task_update.dict(exclude_unset=True)
+    for key, value in task_data.items():
+        setattr(task, key, value)
+    task.updated_at = datetime.utcnow() # Update timestamp
+
     session.add(task)
     session.commit()
     session.refresh(task)
     return task
 
-@router.delete("/api/tasks/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_task(task_id: int, current_user_id: uuid.UUID = Depends(get_current_user), session: Session = Depends(get_session)):
-    task = session.exec(select(Task).where(Task.id == task_id, Task.user_id == current_user_id)).first()
+@router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_task(
+    task_id: int,
+    current_user: TokenData = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    task = session.exec(select(Task).where(Task.id == task_id, Task.user_id == UUID(current_user.user_id))).first()
     if not task:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
-    
+        raise HTTPException(status_code=404, detail="Task not found or not owned by user")
+
     session.delete(task)
     session.commit()
-    return
+    return {"ok": True}

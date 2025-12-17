@@ -1,7 +1,8 @@
 from typing import List, Optional
+from uuid import UUID
 from sqlmodel import Session, select
 from sqlalchemy import or_
-from backend.src.models.task import Task
+from phase2.backend.src.models import Task
 
 class TaskQueryService:
     def __init__(self, session: Session):
@@ -9,7 +10,7 @@ class TaskQueryService:
 
     def query_tasks(
         self,
-        user_id: int,
+        user_id: UUID,
         search: Optional[str] = None,
         priority: Optional[str] = None,
         status: Optional[str] = None,

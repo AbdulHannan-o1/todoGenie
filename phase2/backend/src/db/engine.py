@@ -1,14 +1,33 @@
 from sqlmodel import create_engine
+from sqlalchemy.engine import Engine # Corrected import for Engine
 import os
 
-DATABASE_URL = os.environ.get("DATABASE_URL")
+_engine: Engine | None = None
 
-if not DATABASE_URL:
-    raise ValueError("DATABASE_URL environment variable not set.")
+def create_db_engine(database_url: str | None = None) -> Engine:
+    global _engine
+    if database_url is None:
+        database_url = os.environ.get("DATABASE_URL")
+        if not database_url:
+            raise ValueError("DATABASE_URL environment variable not set.")
+    
+    connect_args = {}
+    if database_url.startswith("sqlite:///:memory:"):
+        connect_args["check_same_thread"] = False
+        
+    _engine = create_engine(database_url, echo=True, connect_args=connect_args)
+    return _engine
 
-# For data encryption in transit (SSL), configure the DATABASE_URL with appropriate SSL parameters (e.g., ?sslmode=require).
-# Data encryption at rest is typically handled by the database provider (e.g., Neon).
-engine = create_engine(DATABASE_URL, echo=True)
+def get_engine() -> Engine:
+    global _engine
+    if _engine is None:
+        _engine = create_db_engine() # Initialize if not already set
+    return _engine
 
-def get_engine():
-    return engine
+def set_test_engine(test_engine: Engine):
+    global _engine
+    _engine = test_engine
+
+# Initialize the engine when the module is imported, using the environment variable
+# This will be overridden by tests
+engine = get_engine()

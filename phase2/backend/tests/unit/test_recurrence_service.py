@@ -1,14 +1,15 @@
+from uuid import UUID
 from datetime import datetime, timedelta, UTC
 import pytest
 from sqlmodel import Session, SQLModel, create_engine
-from backend.src.models.task import Task
-from backend.src.schemas.task import TaskCreate
-from backend.src.services.recurrence_service import generate_recurring_task_instance
+from phase2.backend.src.models import Task
+from phase2.backend.src.schemas.task import TaskCreate
+from phase2.backend.src.services.recurrence_service import generate_recurring_task_instance
 
 # Setup a test database engine
 @pytest.fixture(name="session")
 def session_fixture():
-    engine = create_engine("sqlite:///test.db")
+    engine = create_engine("sqlite:///:memory:")
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
         yield session
@@ -18,7 +19,7 @@ def test_generate_recurring_task_daily(session: Session):
     original_due_date = datetime.now(UTC).replace(microsecond=0) # Ensure microsecond is 0 for consistent comparison
     original_task = Task(
         title="Daily Task",
-        user_id=1,
+        user_id=UUID("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"),
         status="completed",
         priority="low",
         recurrence="daily",
@@ -40,7 +41,7 @@ def test_generate_recurring_task_weekly(session: Session):
     original_due_date = datetime.now(UTC).replace(microsecond=0)
     original_task = Task(
         title="Weekly Task",
-        user_id=1,
+        user_id=UUID("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"),
         status="completed",
         priority="low",
         recurrence="weekly",
@@ -59,7 +60,7 @@ def test_generate_recurring_task_monthly(session: Session):
     original_due_date = datetime.now(UTC).replace(microsecond=0)
     original_task = Task(
         title="Monthly Task",
-        user_id=1,
+        user_id=UUID("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"),
         status="completed",
         priority="low",
         recurrence="monthly",
@@ -77,8 +78,7 @@ def test_generate_recurring_task_monthly(session: Session):
 def test_no_recurrence_task(session: Session):
     original_task = Task(
         title="One-time Task",
-        user_id=1,
-        status="completed",
+        user_id=UUID("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"),        status="completed",
         priority="low",
         recurrence=None,
         due_date=datetime.now(UTC)

@@ -1,6 +1,8 @@
 from typing import List, Optional
+from uuid import UUID
 from sqlmodel import Session, select
-from backend.src.models.task import Task
+from phase2.backend.src.models import Task
+from phase2.backend.src.schemas.task import TaskUpdate
 
 class TaskCRUDService:
     def __init__(self, session: Session):
@@ -12,14 +14,14 @@ class TaskCRUDService:
         self.session.refresh(task)
         return task
 
-    def get_task(self, task_id: int) -> Optional[Task]:
+    def get_task(self, task_id: UUID) -> Optional[Task]:
         return self.session.get(Task, task_id)
 
-    def get_tasks(self, user_id: int) -> List[Task]:
+    def get_tasks(self, user_id: UUID) -> List[Task]:
         statement = select(Task).where(Task.user_id == user_id)
         return self.session.exec(statement).all()
 
-    def update_task(self, task_id: int, task_update: Task) -> Optional[Task]:
+    def update_task(self, task_id: UUID, task_update: TaskUpdate) -> Optional[Task]:
         task = self.session.get(Task, task_id)
         if not task:
             return None
@@ -30,7 +32,7 @@ class TaskCRUDService:
         self.session.refresh(task)
         return task
 
-    def delete_task(self, task_id: int) -> bool:
+    def delete_task(self, task_id: UUID) -> bool:
         task = self.session.get(Task, task_id)
         if not task:
             return False

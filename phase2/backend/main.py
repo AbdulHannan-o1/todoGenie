@@ -1,78 +1,42 @@
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
 import logging
-import json
-import time
-import uuid
-from contextvars import ContextVar, copy_context
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, Depends, HTTPException, status, Request
+from fastapi.responses import JSONResponse
+from jose import JWTError, jwt
+from pydantic import BaseModel
+from typing import Optional
+from datetime import datetime, timedelta
+from phase2.backend.auth_utils import get_current_user, TokenData
+from phase2.backend.routes import auth, tasks
 
 app = FastAPI()
 
-# Define a ContextVar for request_id
-request_id_var: ContextVar[Optional[str]] = ContextVar("request_id", default=None)
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Configure structured logging
-class JsonFormatter(logging.Formatter):
-    def format(self, record):
-        log_record = {
-            "timestamp": self.formatTime(record, self.datefmt),
-            "level": record.levelname,
-            "message": record.getMessage(),
-            "name": record.name,
-            "pathname": record.pathname,
-            "lineno": record.lineno,
-        }
-        current_request_id = request_id_var.get()
-        if current_request_id:
-            log_record['request_id'] = current_request_id
-        if record.exc_info:
-            log_record['exc_info'] = self.formatException(record.exc_info)
-        return json.dumps(log_record)
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    logger.error(f"HTTPException: {exc.status_code} - {exc.detail}")
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"message": exc.detail},
+    )
 
-handler = logging.StreamHandler()
-handler.setFormatter(JsonFormatter())
-logger = logging.getLogger("uvicorn")
-logger.setLevel(logging.INFO)
-logger.addHandler(handler)
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled Exception: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"message": "Internal Server Error"},
+    )
 
-# Add CORS middleware
-origins = [
-    "http://localhost:3000",  # Frontend URL
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    start_time = time.time()
-    request_id = str(uuid.uuid4()) # Generate a unique request ID
-    
-    # Set request_id in ContextVar for the duration of this request
-    token = request_id_var.set(request_id)
-    
-    try:
-        logger.info(f"Request started: {request.method} {request.url}")
-        
-        response = await call_next(request)
-        
-        process_time = time.time() - start_time
-        response.headers["X-Process-Time"] = str(process_time)
-        
-        logger.info(f"Request finished: {request.method} {request.url} - Status: {response.status_code} - Time: {process_time:.4f}s")
-        
-        return response
-    finally:
-        # Reset ContextVar
-        request_id_var.reset(token)
+app.include_router(auth.router, prefix="/auth", tags=["auth"])
+app.include_router(tasks.router, prefix="/api/tasks", tags=["tasks"])
 
 @app.get("/")
-def read_root():
-    logger.info("Root endpoint accessed.")
-    return {"Hello": "World"}
+async def root():
+    return {"message": "Welcome to Todo Genie API"}
+
+@app.get("/users/me/")
+async def read_users_me(current_user: TokenData = Depends(get_current_user)):
+    return {"message": f"Hello {current_user.email}, you are authenticated!"}
