@@ -1,11 +1,15 @@
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, create_engine, SQLModel
-from phase2.backend.src.main import app
-from phase2.backend.src.models import User
-from phase2.backend.src.db.session import get_session
-from phase2.backend.src.services.user_service import create_user
-from phase2.backend.src.utils.hash import get_password_hash
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+from src.main import app
+from src.models import User
+from src.db.session import get_session
+from src.services.user_service import create_user
+from src.utils.hash import get_password_hash
 
 
 

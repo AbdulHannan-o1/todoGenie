@@ -2,7 +2,7 @@ from typing import List, Optional
 from uuid import UUID
 from sqlmodel import Session, select
 from sqlalchemy import or_
-from phase2.backend.src.models import Task
+from ..models import Task
 
 class TaskQueryService:
     def __init__(self, session: Session):

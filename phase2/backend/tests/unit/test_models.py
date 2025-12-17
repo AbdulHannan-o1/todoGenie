@@ -1,6 +1,10 @@
 from datetime import datetime, UTC
-from phase2.backend.src.models import Task, User
-from phase2.backend.src.schemas.task import TaskCreate, TaskUpdate
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
+
+from src.models import Task, User
+from src.schemas.task import TaskCreate, TaskUpdate
 from uuid import UUID
 
 def test_create_task_model():

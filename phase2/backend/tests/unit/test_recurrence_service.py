@@ -2,9 +2,13 @@ from uuid import UUID
 from datetime import datetime, timedelta, UTC
 import pytest
 from sqlmodel import Session, SQLModel, create_engine
-from phase2.backend.src.models import Task
-from phase2.backend.src.schemas.task import TaskCreate
-from phase2.backend.src.services.recurrence_service import generate_recurring_task_instance
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
+
+from src.models import Task
+from src.schemas.task import TaskCreate
+from src.services.recurrence_service import generate_recurring_task_instance
 
 # Setup a test database engine
 @pytest.fixture(name="session")

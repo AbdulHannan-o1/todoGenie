@@ -186,6 +186,8 @@ Your core function is efficient and safe assistance. Balance extreme conciseness
 - Python 3.10+ + FastAPI, WhatsApp API (specific provider to be determined during research) (001-backend-task-management)
 - Neon Serverless PostgreSQL with SQLModel ORM (001-backend-task-management)
 - Python 3.10+, TypeScript + FastAPI, Next.js, Better Auth, SQLModel, Neon Serverless PostgreSQL (001-better-auth-authentication)
+- TypeScript (for Next.js frontend), Python 3.10+ (for FastAPI backend) + Next.js, Shadcn UI, Tailwind CSS, Better Auth (frontend integration), FastAPI (backend), SQLModel (backend) (001-frontend-ui)
+- Neon Serverless PostgreSQL (backend data persistence), Browser Local Storage (frontend theme preference persistence) (001-frontend-ui)
 
 ## Recent Changes
 - 001-task-priority: Added Python 3.10+ + `rich` (for enhanced UI and colors)

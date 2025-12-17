@@ -1,7 +1,7 @@
 from datetime import datetime
 from sqlmodel import Session
-from phase2.backend.src.models import Task
-from phase2.backend.src.utils.logger import get_logger
+from ..models import Task
+from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
 

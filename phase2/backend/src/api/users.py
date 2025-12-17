@@ -1,10 +1,10 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session
-from phase2.backend.src.db.session import get_session
-from phase2.backend.src.models import User
-from phase2.backend.src.schemas.user import UserRead
-from phase2.backend.src.api.auth import get_current_user
+from ..db.session import get_session
+from ..models import User
+from ..schemas.user import UserRead
+from .auth import get_current_user
 
 router = APIRouter(prefix="/users", tags=["users"])
 

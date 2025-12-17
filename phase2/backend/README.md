@@ -14,15 +14,15 @@ To set up the backend for development, follow these steps:
 
 2.  **Set up the database:**
 
-    The backend uses a PostgreSQL database. You can use a local PostgreSQL instance or a cloud-based service like Neon.
+    The backend uses Neon Serverless PostgreSQL database as required for Phase 2 of the hackathon. Sign up at [neon.tech](https://neon.tech) to create a free PostgreSQL database.
 
     Create a `.env` file in the `backend` directory and add the following environment variable:
 
     ```
-    DATABASE_URL=postgresql://user:password@host:port/database
+    DATABASE_URL=postgresql://username:password@ep-xxx.us-east-1.aws.neon.tech/dbname?sslmode=require
     ```
 
-    Replace `user`, `password`, `host`, `port`, and `database` with your database credentials.
+    Replace the connection string with your actual Neon database connection string from the Neon dashboard.
 
 3.  **Run database migrations:**
 

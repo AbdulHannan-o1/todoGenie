@@ -1,9 +1,13 @@
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, create_engine, SQLModel
-from phase2.backend.src.main import app
-from phase2.backend.src.models import User, Task
-from phase2.backend.src.db.session import get_session
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+from src.main import app
+from src.models import User, Task
+from src.db.session import get_session
 
 
 
