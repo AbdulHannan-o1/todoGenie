@@ -10,7 +10,7 @@ describe('Login Flow', () => {
     const password = 'securepassword123';
 
     // Register a user first for the test
-    cy.request('POST', 'http://localhost:8000/users/register', {
+    cy.request('POST', 'http://localhost:8001/users/register', {
       email,
       username,
       password,

@@ -16,15 +16,15 @@ describe('Secure Task Access', () => {
 
   before(() => {
     // Register user1 and get token
-    cy.request('POST', 'http://localhost:8000/users/register', user1)
-      .then(() => cy.request('POST', 'http://localhost:8000/users/login', { identifier: user1.email, password: user1.password }))
+    cy.request('POST', 'http://localhost:8001/users/register', user1)
+      .then(() => cy.request('POST', 'http://localhost:8001/users/login', { identifier: user1.email, password: user1.password }))
       .then((response) => {
         user1Token = response.body.access_token;
       });
 
     // Register user2 and get token
-    cy.request('POST', 'http://localhost:8000/users/register', user2)
-      .then(() => cy.request('POST', 'http://localhost:8000/users/login', { identifier: user2.email, password: user2.password }))
+    cy.request('POST', 'http://localhost:8001/users/register', user2)
+      .then(() => cy.request('POST', 'http://localhost:8001/users/login', { identifier: user2.email, password: user2.password }))
       .then((response) => {
         user2Token = response.body.access_token;
       });
@@ -32,7 +32,7 @@ describe('Secure Task Access', () => {
     // User1 creates a task
     cy.request({
       method: 'POST',
-      url: 'http://localhost:8000/tasks',
+      url: 'http://localhost:8001/tasks',
       headers: {
         Authorization: `Bearer ${user1Token}`,
       },
@@ -47,7 +47,7 @@ describe('Secure Task Access', () => {
   it('User1 should be able to access their own task', () => {
     cy.request({
       method: 'GET',
-      url: `http://localhost:8000/tasks/${user1TaskId}`,
+      url: `http://localhost:8001/tasks/${user1TaskId}`,
       headers: {
         Authorization: `Bearer ${user1Token}`,
       },
@@ -60,7 +60,7 @@ describe('Secure Task Access', () => {
   it('User2 should NOT be able to access User1\'s task', () => {
     cy.request({
       method: 'GET',
-      url: `http://localhost:8000/tasks/${user1TaskId}`,
+      url: `http://localhost:8001/tasks/${user1TaskId}`,
       headers: {
         Authorization: `Bearer ${user2Token}`,
       },
@@ -74,7 +74,7 @@ describe('Secure Task Access', () => {
   it('Unauthenticated user should NOT be able to access any task', () => {
     cy.request({
       method: 'GET',
-      url: `http://localhost:8000/tasks/${user1TaskId}`,
+      url: `http://localhost:8001/tasks/${user1TaskId}`,
       failOnStatusCode: false,
     }).then((response) => {
       expect(response.status).to.eq(401);

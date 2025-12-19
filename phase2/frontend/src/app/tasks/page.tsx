@@ -1,15 +1,15 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/context/auth-context";
 import { useRouter } from "next/navigation";
 import Sidebar from "../../components/layout/sidebar";
-import { motion } from "framer-motion";
-import { Menu, Plus, Search, Filter, Calendar, TrendingUp, CheckCircle, Clock, ListTodo, AlertCircle, Loader2 } from "lucide-react";
-import { taskApi, TaskCreateData } from "@/lib/api/tasks";
+import { taskApi } from "@/lib/api/tasks";
 import { Task } from "@/types/task";
+import { Menu, Plus, Search, Filter, Calendar, CheckCircle, Clock, ListTodo, AlertCircle, Loader2 } from "lucide-react";
+import { motion } from "framer-motion";
 
-export default function DashboardPage() {
+export default function TasksPage() {
   const { isAuthenticated, user, isLoading } = useAuth();
   const router = useRouter();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -19,7 +19,6 @@ export default function DashboardPage() {
   const [priorityFilter, setPriorityFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [showFilters, setShowFilters] = useState(false);
-  const filterPanelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isLoading) {
@@ -38,22 +37,6 @@ export default function DashboardPage() {
       fetchTasks();
     }
   }, [searchTerm, priorityFilter, statusFilter, isAuthenticated, user?.id]);
-
-  // Close filter panel when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (filterPanelRef.current && !filterPanelRef.current.contains(event.target as Node)) {
-        setShowFilters(false);
-      }
-    }
-
-    // Bind the event listener
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      // Unbind the event listener on clean up
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
 
   const fetchTasks = async () => {
     try {
@@ -121,7 +104,7 @@ export default function DashboardPage() {
 
   // Calculate stats based on tasks
   const totalTasks = tasks.length;
-  const completedTasks = tasks.filter(task => task.completed).length;
+  const completedTasks = tasks.filter(task => task.status === 'completed').length;
   const pendingTasks = totalTasks - completedTasks;
   const overdueTasks = 0; // This would require date comparison in a real implementation
 
@@ -151,8 +134,8 @@ export default function DashboardPage() {
                 <Menu className="h-5 w-5 text-slate-300" />
               </button>
               <div>
-                <h1 className="text-2xl font-bold">Dashboard</h1>
-                <p className="text-slate-400 text-sm">Welcome back, {user?.email?.split('@')[0]}</p>
+                <h1 className="text-2xl font-bold">Tasks</h1>
+                <p className="text-slate-400 text-sm">Manage your tasks efficiently</p>
               </div>
             </div>
 
@@ -175,54 +158,13 @@ export default function DashboardPage() {
                 <Filter className="h-5 w-5 text-slate-300" />
               </button>
 
-              {/* Filter Panel */}
-              {showFilters && (
-                <div ref={filterPanelRef} className="absolute top-full right-0 mt-2 w-64 bg-slate-800/90 backdrop-blur-sm border border-slate-700 rounded-lg shadow-lg z-10 p-4">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-1">Priority</label>
-                      <select
-                        value={priorityFilter}
-                        onChange={(e) => setPriorityFilter(e.target.value)}
-                        className="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-cyan-500"
-                      >
-                        <option value="">All Priorities</option>
-                        <option value="low">Low</option>
-                        <option value="medium">Medium</option>
-                        <option value="high">High</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-1">Status</label>
-                      <select
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                        className="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-cyan-500"
-                      >
-                        <option value="">All Statuses</option>
-                        <option value="pending">Pending</option>
-                        <option value="in progress">In Progress</option>
-                        <option value="completed">Completed</option>
-                        <option value="archived">Archived</option>
-                        <option value="cancelled">Cancelled</option>
-                      </select>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setPriorityFilter("");
-                        setStatusFilter("");
-                      }}
-                      className="w-full py-2 text-sm bg-slate-700 hover:bg-slate-600 text-white rounded transition-colors"
-                    >
-                      Clear Filters
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              <div className="w-8 h-8 rounded-full bg-cyan-600 flex items-center justify-center">
-                <span className="text-sm font-medium">{user?.email?.charAt(0).toUpperCase()}</span>
-              </div>
+              <button
+                className="flex items-center bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg transition-colors"
+                onClick={() => router.push('/tasks/new')}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                New Task
+              </button>
             </div>
           </div>
         </header>
@@ -252,18 +194,6 @@ export default function DashboardPage() {
                 </motion.div>
               );
             })}
-          </div>
-
-          {/* Quick Actions */}
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold">Recent Tasks</h2>
-            <button
-              className="flex items-center bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg transition-colors"
-              onClick={() => router.push('/tasks/new')}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              New Task
-            </button>
           </div>
 
           {/* Task List */}
@@ -299,12 +229,12 @@ export default function DashboardPage() {
                             <div className="flex items-center">
                               <input
                                 type="checkbox"
-                                checked={task.completed}
+                                checked={task.status === 'completed'}
                                 onChange={() => handleTaskStatusChange(task)}
                                 className="h-4 w-4 rounded border-slate-600 bg-slate-700 text-cyan-600 focus:ring-cyan-500"
                               />
                               <div className="ml-3">
-                                <span className={`${task.completed ? "line-through text-slate-500" : "text-white"}`}>
+                                <span className={`${task.status === 'completed' ? "line-through text-slate-500" : "text-white"}`}>
                                   {task.title}
                                 </span>
                                 <span className={`ml-2 text-xs px-2 py-1 rounded-full ${
@@ -322,11 +252,11 @@ export default function DashboardPage() {
                           </td>
                           <td className="py-3 px-4">
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              task.completed
+                              task.status === 'completed'
                                 ? "bg-green-500/20 text-green-400"
                                 : "bg-yellow-500/20 text-yellow-400"
                             }`}>
-                              {task.completed ? "Completed" : "Pending"}
+                              {task.status === 'completed' ? "Completed" : "Pending"}
                             </span>
                           </td>
                           <td className="py-3 px-4 text-slate-300">
@@ -374,7 +304,7 @@ export default function DashboardPage() {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={5} className="py-8 px-4 text-center text-slate-500">
+                        <td colSpan={6} className="py-8 px-4 text-center text-slate-500">
                           No tasks found. Create your first task to get started!
                         </td>
                       </tr>

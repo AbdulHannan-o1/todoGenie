@@ -4,10 +4,10 @@ import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/auth-context";
 import { useRouter } from "next/navigation";
 import Sidebar from "../../components/layout/sidebar";
-import { Send, Bot, User, Sparkles } from "lucide-react";
+import { Menu, Send, Bot, User, Sparkles } from "lucide-react";
 
 export default function ChatPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading: authIsLoading } = useAuth();
   const router = useRouter();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [messages, setMessages] = useState([
@@ -18,10 +18,14 @@ export default function ChatPage() {
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
 
   useEffect(() => {
+    if (authIsLoading) {
+      // Still loading auth state, don't redirect yet
+      return;
+    }
     if (!isAuthenticated) {
       router.push("/login");
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, authIsLoading, router]);
 
   useEffect(() => {
     scrollToBottom();
@@ -65,6 +69,14 @@ export default function ChatPage() {
     }
   };
 
+  if (authIsLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800 text-white">
+        Loading...
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800 text-white">
@@ -82,8 +94,16 @@ export default function ChatPage() {
         <header className="sticky top-0 z-10 bg-slate-800/80 backdrop-blur-sm border-b border-slate-700">
           <div className="flex items-center justify-between p-4">
             <div className="flex items-center">
-              <Sparkles className="h-6 w-6 text-cyan-400 mr-2" />
-              <h1 className="text-2xl font-bold">AI Chat Assistant</h1>
+              <button
+                onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                className="mr-4 p-2 rounded-lg bg-slate-700/50 hover:bg-slate-700 transition-colors"
+              >
+                <Menu className="h-5 w-5 text-slate-300" />
+              </button>
+              <div className="flex items-center">
+                <Sparkles className="h-6 w-6 text-cyan-400 mr-2" />
+                <h1 className="text-2xl font-bold">AI Chat Assistant</h1>
+              </div>
             </div>
           </div>
         </header>

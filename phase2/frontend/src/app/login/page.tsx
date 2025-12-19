@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import apiClient from "@/lib/api-client";
+import { userApi } from "@/lib/api/user";
 import { toast } from "sonner";
 import { Eye, EyeOff } from 'lucide-react';
 
@@ -16,7 +17,14 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const { login: authLogin } = useAuth();
+  const { isAuthenticated, isLoading, login: authLogin } = useAuth();
+
+  useEffect(() => {
+    // If user is already authenticated, redirect to dashboard
+    if (!isLoading && isAuthenticated) {
+      router.push("/dashboard");
+    }
+  }, [isAuthenticated, isLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,9 +41,15 @@ export default function LoginPage() {
         }
       });
       const { access_token } = response.data;
-      // Note: The user details would typically be fetched separately using the token
-      // For now, we'll pass minimal user data and the auth context should handle the rest
-      authLogin(access_token, { id: null, email: email }); // We'll get user details separately
+
+      // Set the token in the API client so we can make authenticated requests
+      apiClient.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+
+      // Fetch the current user's information
+      const userData = await userApi.getCurrentUser();
+
+      // Login with the actual user data including the ID
+      authLogin(access_token, userData);
       toast.success("Logged in successfully!");
       router.push("/home"); // Redirect to home page after successful login
     } catch (error: any) {
@@ -46,6 +60,11 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
+  // Show nothing while loading auth state to prevent flash of login form for authenticated users
+  if (!isLoading && isAuthenticated) {
+    return null; // Redirect effect will handle navigation
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800 p-4">
