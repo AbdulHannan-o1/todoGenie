@@ -6,7 +6,7 @@ from ..models import User
 from ..schemas.user import UserRead
 from .auth import get_current_user
 
-router = APIRouter(prefix="/users", tags=["users"])
+router = APIRouter(prefix="/api/users", tags=["users"])
 
 @router.get("/", response_model=List[UserRead])
 def read_users(
@@ -18,6 +18,15 @@ def read_users(
     """
     users = session.query(User).all()
     return users
+
+@router.get("/me", response_model=UserRead)
+def read_current_user(
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Retrieve the current user's information.
+    """
+    return current_user
 
 @router.get("/{user_id}", response_model=UserRead)
 def read_user(

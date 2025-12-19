@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/auth-context";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import apiClient from "@/lib/api-client";
+import { userApi } from "@/lib/api/user";
 import { toast } from "sonner";
 import { Eye, EyeOff } from 'lucide-react';
 
@@ -19,6 +21,7 @@ export default function SignupPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { login: authLogin } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,13 +39,35 @@ export default function SignupPage() {
 
     setLoading(true);
     try {
+      // Register the user
       await apiClient.post("/auth/register", {
         email,
         username, // Send username instead of name
         password
       });
-      toast.success("Registration successful! Please log in.");
-      router.push("/login"); // Redirect to login page after successful registration
+
+      // Now log the user in automatically
+      const formData = new URLSearchParams();
+      formData.append('username', email);  // OAuth2 expects 'username' field (can be email)
+      formData.append('password', password);
+
+      const response = await apiClient.post("/auth/token", formData, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        }
+      });
+      const { access_token } = response.data;
+
+      // Set the token in the API client so we can make authenticated requests
+      apiClient.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+
+      // Fetch the current user's information
+      const userData = await userApi.getCurrentUser();
+
+      // Login with the actual user data including the ID
+      authLogin(access_token, userData);
+      toast.success("Registration and login successful!");
+      router.push("/home"); // Redirect to home page after successful registration and login
     } catch (error: any) {
       const errorMessage =
         error.response?.data?.detail || "Registration failed. Please try again.";

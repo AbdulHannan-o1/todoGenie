@@ -6,7 +6,7 @@ const ContentSecurityPolicy = `
   style-src 'self' 'unsafe-inline';
   img-src 'self' blob: data:;
   media-src 'none';
-  connect-src 'self' ${process.env.NEXT_PUBLIC_BACKEND_API_URL || "http://localhost:8000"};
+  connect-src 'self' ${process.env.NEXT_PUBLIC_BACKEND_API_URL || "http://localhost:8001"};
   font-src 'self';
 `;
 

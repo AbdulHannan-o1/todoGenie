@@ -33,10 +33,12 @@ To set up the backend for development, follow these steps:
 4.  **Run the application:**
 
     ```bash
-    uvicorn backend.src.main:app --reload
+    uvicorn src.main:app --host 0.0.0.0 --port 8000
+    # If port 8000 is already in use, use a different port:
+    # uvicorn src.main:app --host 0.0.0.0 --port 8001
     ```
 
-    The application will be available at `http://localhost:8000`.
+    The application will be available at `http://localhost:8000` (or the specified port if different).
 
 ## Deployment
 
