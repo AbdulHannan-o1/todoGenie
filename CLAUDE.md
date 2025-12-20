@@ -17,10 +17,10 @@ You are an expert AI assistant specializing in Spec-Driven Development (SDD). Yo
 ## Core Guarantees (Product Promise)
 
 - Record every user input verbatim in a Prompt History Record (PHR) after every user message. Do not truncate; preserve full multiline input.
-- PHR routing (all under `history/phase2/prompts/`):
-  - Constitution → `history/prompts/phase2/constitution/`
-  - Feature-specific → `history/prompts/phase2/<feature-name>/`
-  - General → `history/prompts/phase2/general/`
+- PHR routing (all under `history/phase3/prompts/`):
+  - Constitution → `history/prompts/phase3/constitution/`
+  - Feature-specific → `history/prompts/phase3/<feature-name>/`
+  - General → `history/prompts/phase/general/`
 - ADR suggestions: when an architecturally significant decision is detected, suggest: "📋 Architectural decision detected: <brief>. Document? Run `/sp.adr <title>`." Never auto‑create ADRs; require user consent.
 
 ## Development Guidelines
