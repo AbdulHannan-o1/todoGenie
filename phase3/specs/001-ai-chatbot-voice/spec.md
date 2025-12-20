@@ -182,13 +182,14 @@ Enhance the existing todo application with an AI-powered chatbot interface for m
 
 ## Dependencies
 
-- Google Gemini 2.5 Flash model via OpenAI-compatible API for AI processing
+- OpenAI Agents SDK for AI processing
 - Official MCP SDK for tool integration
 - Browser Web Speech API for voice processing (no external service required) - v1 approach
 - Better Auth for user authentication (existing integration)
 - Neon Serverless PostgreSQL for data storage (existing)
 - Existing Phase 2 frontend and backend infrastructure
-- Next.js for frontend chat interface
+- OpenAI ChatKit for frontend chat interface
+- Next.js for frontend framework
 - FastAPI for backend services
 
 ## Clarifications

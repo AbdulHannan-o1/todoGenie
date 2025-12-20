@@ -7,12 +7,12 @@
 
 ## Summary
 
-Implement an AI-powered chatbot with voice support that allows users to manage todos through natural language commands. The system will integrate Google Gemini 2.5 Flash AI model via OpenAI-compatible API for processing both text and voice commands, with browser-based Web Speech API for voice-to-text conversion in v1. The solution will include a custom Model Context Protocol (MCP) server built with FastAPI to expose todo operations as tools for the AI agent, with conversation state persisted in the existing PostgreSQL database. The implementation will integrate with the existing Better Auth authentication system to ensure proper user data isolation.
+Implement an AI-powered chatbot with voice support that allows users to manage todos through natural language commands. The system will integrate OpenAI Agents SDK with GPT-4 model for processing both text and voice commands, with browser-based Web Speech API for voice-to-text conversion in v1. The solution will include a custom Model Context Protocol (MCP) server built with FastAPI to expose todo operations as tools for the AI agent, with conversation state persisted in the existing PostgreSQL database. The implementation will integrate with the existing Better Auth authentication system to ensure proper user data isolation. The frontend will use OpenAI ChatKit for the conversational interface.
 
 ## Technical Context
 
 **Language/Version**: Python 3.11, JavaScript/TypeScript for frontend
-**Primary Dependencies**: FastAPI for backend, Next.js for frontend, Better Auth for authentication, Google Gemini 2.5 Flash API, MCP SDK
+**Primary Dependencies**: FastAPI for backend, Next.js for frontend, Better Auth for authentication, OpenAI Agents SDK, MCP SDK
 **Storage**: Neon Serverless PostgreSQL database
 **Testing**: pytest for backend, Jest/React Testing Library for frontend
 **Target Platform**: Web application (Linux server backend, cross-platform frontend)
@@ -79,7 +79,7 @@ phase3/
 │   │   │   ├── chatbot.py       # AI chatbot service
 │   │   │   ├── voice_processor.py # Voice processing service
 │   │   │   ├── mcp_server.py    # Model Context Protocol server
-│   │   │   └── ai_agent.py      # AI agent integration
+│   │   │   └── ai_agent.py      # AI agent integration with OpenAI Agents SDK
 │   │   ├── api/
 │   │   │   ├── v1/
 │   │   │   │   ├── chat.py      # Chat API endpoints
@@ -98,7 +98,7 @@ phase3/
     ├── src/
     │   ├── components/
     │   │   ├── Chat/
-    │   │   │   ├── ChatInterface.tsx    # Enhanced chat interface with voice controls
+    │   │   │   ├── ChatInterface.tsx    # OpenAI ChatKit interface with voice controls
     │   │   │   ├── VoiceInput.tsx       # Voice input component
     │   │   │   └── MessageList.tsx      # Message display component
     │   │   └── common/
@@ -113,7 +113,7 @@ phase3/
     └── next.config.js
 ```
 
-**Structure Decision**: Web application structure with separate backend (FastAPI) and frontend (Next.js) components. The backend includes a custom MCP server for AI tool integration, while the frontend provides an enhanced chat interface with voice input capabilities. This structure maintains separation of concerns while allowing for tight integration between the AI agent and the todo management functionality.
+**Structure Decision**: Web application structure with separate backend (FastAPI) and frontend (Next.js) components. The backend includes a custom MCP server for AI tool integration using OpenAI Agents SDK, while the frontend provides an OpenAI ChatKit interface with voice input capabilities. This structure maintains separation of concerns while allowing for tight integration between the AI agent and the todo management functionality.
 
 ## Complexity Tracking
 

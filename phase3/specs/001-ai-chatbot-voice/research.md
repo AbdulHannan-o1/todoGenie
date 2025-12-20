@@ -1,10 +1,10 @@
 # Research: AI-Powered Todo Chatbot with Voice Support
 
-## Decision: Use Google Gemini 2.5 Flash via OpenAI-compatible API
-**Rationale**: The Gemini 2.5 Flash model offers excellent performance for natural language understanding tasks like processing todo commands. It's cost-effective, fast, and provides good reasoning capabilities for interpreting user intent. Using the OpenAI-compatible API allows us to leverage the same SDK patterns while benefiting from Google's model capabilities.
+## Decision: Use OpenAI Agents SDK with GPT-4 model
+**Rationale**: The OpenAI Agents SDK provides a standardized way to create AI agents that can use tools (MCP tools in our case) to perform actions. GPT-4 offers excellent performance for natural language understanding tasks like processing todo commands with strong reasoning capabilities for interpreting user intent. The Agents SDK specifically supports tool usage which is essential for our MCP integration. This approach aligns with the hackathon requirements and provides access to OpenAI's advanced AI capabilities.
 
 **Alternatives considered**:
-- OpenAI GPT-4: More expensive, slightly slower
+- Google Gemini API: Would require different SDK integration patterns and doesn't align with hackathon requirements
 - OpenAI GPT-3.5 Turbo: Less capable for complex reasoning
 - Open-source models: Would require local infrastructure and tuning
 

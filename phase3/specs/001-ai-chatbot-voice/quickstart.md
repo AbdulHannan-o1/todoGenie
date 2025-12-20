@@ -6,7 +6,7 @@
 - Node.js 18+ (for frontend development)
 - PostgreSQL database (Neon Serverless recommended)
 - Better Auth configured
-- Google AI API key for Gemini 2.5 Flash model
+- OpenAI API key for OpenAI Agents SDK
 - MCP SDK installed
 
 ## Environment Setup
@@ -15,14 +15,14 @@
 
 1. **Install Python dependencies**:
    ```bash
-   pip install fastapi uvicorn python-multipart pydantic google-generativeai python-dotenv
+   pip install fastapi uvicorn python-multipart pydantic openai python-dotenv
    pip install aiomcp  # For MCP server implementation
    ```
 
 2. **Set up environment variables**:
    ```bash
    # Create .env file in backend root
-   GOOGLE_API_KEY=your_google_api_key_here
+   OPENAI_API_KEY=your_openai_api_key_here
    DATABASE_URL=postgresql://your_neon_db_url
    MCP_SERVER_PORT=8001
    ```
