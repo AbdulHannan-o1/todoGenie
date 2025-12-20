@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: todogenie-postgres
+    networks:
+      - todogenie-network
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: todogenie_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+networks:
+  todogenie-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
