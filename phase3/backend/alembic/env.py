@@ -8,6 +8,17 @@ from sqlmodel import SQLModel, create_engine
 from alembic import context
 from dotenv import load_dotenv
 
+# Import models to include them in metadata
+import sys
+import os
+
+# Add the backend directory to the Python path to import modules
+backend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, backend_path)
+
+# Import all models from the consolidated alembic models file
+from alembic_models import Task, User, Conversation, Message
+
 load_dotenv()
 
 # this is the Alembic Config object, which provides

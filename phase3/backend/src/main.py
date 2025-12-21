@@ -6,6 +6,8 @@ from sqlmodel import SQLModel
 from .api.auth import router as auth_router
 from .api.users import router as users_router
 from .api.tasks import router as tasks_router
+from .api.v1.chat import router as chat_router
+from .api.v1.voice import router as voice_router
 from .models import User
 from .db.session import get_session
 from .db.engine import get_engine
@@ -40,6 +42,8 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(tasks_router)
+app.include_router(chat_router)
+app.include_router(voice_router)
 
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):

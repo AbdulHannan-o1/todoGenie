@@ -4,17 +4,37 @@ import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/auth-context";
 import { useRouter } from "next/navigation";
 import Sidebar from "../../components/layout/sidebar";
+import VoiceInput from "../../components/Chat/VoiceInput";
 import { Menu, Send, Bot, User, Sparkles } from "lucide-react";
 
 export default function ChatPage() {
   const { isAuthenticated, isLoading: authIsLoading } = useAuth();
   const router = useRouter();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [messages, setMessages] = useState([
+  // Define types for better TypeScript support
+  type Message = {
+    id: number | string;
+    text: string;
+    sender: 'user' | 'bot';
+  };
+
+  type Conversation = {
+    id: string;
+    title: string;
+    created_at: string;
+    updated_at: string;
+    message_count: number;
+  };
+
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Message[]>([
     { id: 1, text: "Hello! I'm your AI assistant. How can I help you with your tasks today?", sender: "bot" },
   ]);
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isConversationsLoading, setIsConversationsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
 
   useEffect(() => {
@@ -28,8 +48,71 @@ export default function ChatPage() {
   }, [isAuthenticated, authIsLoading, router]);
 
   useEffect(() => {
+    if (isAuthenticated && !authIsLoading) {
+      loadConversations();
+    }
+  }, [isAuthenticated, authIsLoading]);
+
+  useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    if (selectedConversationId) {
+      loadConversationHistory(selectedConversationId);
+    } else {
+      // Show welcome message when no conversation is selected
+      setMessages([
+        { id: 1, text: "Hello! I'm your AI assistant. How can I help you with your tasks today?", sender: "bot" },
+      ]);
+    }
+  }, [selectedConversationId]);
+
+  const loadConversations = async () => {
+    setIsConversationsLoading(true);
+    try {
+      const response = await fetch('/api/v1/chat/conversations');
+      if (response.ok) {
+        const data = await response.json();
+        setConversations(data);
+      }
+    } catch (error) {
+      console.error('Error loading conversations:', error);
+    } finally {
+      setIsConversationsLoading(false);
+    }
+  };
+
+  const loadConversationHistory = async (conversationId: string) => {
+    try {
+      const response = await fetch(`/api/v1/chat/conversations/${conversationId}`);
+      if (response.ok) {
+        const data = await response.json();
+        // Transform backend messages to frontend format
+        const formattedMessages = data.messages.map((msg: any, index: number) => ({
+          id: msg.id || (index + 1),
+          text: msg.content,
+          sender: msg.role === 'assistant' ? 'bot' : 'user',
+        }));
+        setMessages(formattedMessages);
+      } else {
+        // If conversation doesn't exist yet, start with empty messages
+        setMessages([]);
+      }
+    } catch (error) {
+      console.error('Error loading conversation history:', error);
+      setMessages([
+        { id: 1, text: "Hello! I'm your AI assistant. How can I help you with your tasks today?", sender: "bot" },
+      ]);
+    }
+  };
+
+  const createNewConversation = () => {
+    setSelectedConversationId(null);
+    setMessages([
+      { id: 1, text: "Hello! I'm your AI assistant. How can I help you with your tasks today?", sender: "bot" },
+    ]);
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -49,17 +132,58 @@ export default function ChatPage() {
     setInputMessage("");
     setIsLoading(true);
 
-    // Simulate AI response
-    setTimeout(() => {
+    try {
+      // Send message to backend API
+      const response = await fetch('/api/v1/chat/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content: inputMessage,
+          message_type: 'text', // or 'voice' if coming from voice input
+          conversation_id: selectedConversationId || undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      // Update the selected conversation ID if it was created
+      if (data.conversation_id && !selectedConversationId) {
+        setSelectedConversationId(data.conversation_id);
+        // Refresh the conversation list
+        loadConversations();
+      }
+
+      // Add AI response
       const botResponse = {
         id: Date.now() + 1,
-        text: "I received your message: '" + inputMessage + "'. In a real implementation, I would process this with natural language and interact with the task management system.",
+        text: data.response || "I processed your request successfully.",
         sender: "bot" as const,
       };
 
       setMessages((prev) => [...prev, botResponse]);
+    } catch (error: any) {
+      console.error('Error sending message:', error);
+
+      // Set error state
+      setError(error.message || 'Sorry, I encountered an error processing your request. Please try again.');
+
+      // Add error message
+      const errorMessage = {
+        id: Date.now() + 1,
+        text: error.message || "Sorry, I encountered an error processing your request. Please try again.",
+        sender: "bot" as const,
+      };
+
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -89,7 +213,58 @@ export default function ChatPage() {
     <div className="flex min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white">
       <Sidebar isCollapsed={isSidebarCollapsed} toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
 
-      <main className={`flex-1 transition-all duration-300 ${isSidebarCollapsed ? 'md:ml-16' : 'md:ml-64'}`}>
+      {/* Conversations sidebar */}
+      <div className={`bg-slate-800 border-r border-slate-700 transition-all duration-300 ${isSidebarCollapsed ? 'w-0' : 'w-64 md:w-80 overflow-hidden'}`}>
+        <div className="p-4 border-b border-slate-700">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Conversations</h2>
+            <button
+              onClick={createNewConversation}
+              className="p-2 rounded-lg bg-cyan-600 hover:bg-cyan-700 transition-colors"
+            >
+              <span className="text-sm">New</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="overflow-y-auto h-[calc(100vh-120px)]">
+          {isConversationsLoading ? (
+            <div className="p-4 text-center text-slate-400">Loading conversations...</div>
+          ) : conversations.length === 0 ? (
+            <div className="p-4 text-center text-slate-400">No conversations yet</div>
+          ) : (
+            <div className="p-2">
+              {conversations.map((conversation) => (
+                <div
+                  key={conversation.id}
+                  className={`p-3 rounded-lg mb-2 cursor-pointer transition-colors ${
+                    selectedConversationId === conversation.id
+                      ? 'bg-cyan-600/20 border border-cyan-500'
+                      : 'bg-slate-700/50 hover:bg-slate-700'
+                  }`}
+                  onClick={() => setSelectedConversationId(conversation.id)}
+                >
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium truncate">
+                        {conversation.title || `Conversation ${conversation.id.substring(0, 8)}`}
+                      </h3>
+                      <p className="text-xs text-slate-400 mt-1">
+                        {conversation.message_count} {conversation.message_count === 1 ? 'message' : 'messages'}
+                      </p>
+                    </div>
+                    <span className="text-xs text-slate-500 whitespace-nowrap">
+                      {new Date(conversation.updated_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <main className={`flex-1 transition-all duration-300 ${isSidebarCollapsed ? 'md:ml-16' : 'md:ml-[32rem]'}`}>
         {/* Navbar */}
         <header className="sticky top-0 z-10 bg-slate-800/80 backdrop-blur-sm border-b border-slate-700">
           <div className="flex items-center justify-between p-4">
@@ -105,11 +280,45 @@ export default function ChatPage() {
                 <h1 className="text-2xl font-bold">AI Chat Assistant</h1>
               </div>
             </div>
+            {selectedConversationId && (
+              <button
+                onClick={() => {
+                  if (confirm('Are you sure you want to delete this conversation?')) {
+                    fetch(`/api/v1/chat/conversations/${selectedConversationId}`, {
+                      method: 'DELETE',
+                    })
+                    .then(() => {
+                      setSelectedConversationId(null);
+                      loadConversations();
+                    })
+                    .catch(error => console.error('Error deleting conversation:', error));
+                  }
+                }}
+                className="p-2 rounded-lg bg-red-600/50 hover:bg-red-600 transition-colors"
+              >
+                Delete
+              </button>
+            )}
           </div>
         </header>
 
         {/* Chat Container */}
         <div className="flex flex-col h-[calc(100vh-73px)]">
+          {/* Error display */}
+          {error && (
+            <div className="bg-red-500/20 border border-red-500 text-red-200 p-3 m-4 rounded-lg">
+              <div className="flex justify-between items-center">
+                <span>{error}</span>
+                <button
+                  onClick={() => setError(null)}
+                  className="text-red-300 hover:text-white"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Messages Area */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {messages.map((message) => (
@@ -170,13 +379,92 @@ export default function ChatPage() {
                   rows={2}
                 />
               </div>
-              <button
-                onClick={handleSendMessage}
-                disabled={isLoading || !inputMessage.trim()}
-                className="h-12 w-12 flex items-center justify-center bg-cyan-600 hover:bg-cyan-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Send className="h-5 w-5" />
-              </button>
+              <div className="flex flex-col space-y-2">
+                <button
+                  onClick={handleSendMessage}
+                  disabled={isLoading || !inputMessage.trim()}
+                  className="h-12 w-12 flex items-center justify-center bg-cyan-600 hover:bg-cyan-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Send className="h-5 w-5" />
+                </button>
+                <VoiceInput
+                  onTranscript={(transcript) => {
+                    // Set the transcribed text to the input field
+                    setInputMessage(transcript);
+                    // Automatically send the message after transcription
+                    if (transcript.trim()) {
+                      // Update the message type to voice in the fetch call
+                      const handleVoiceSendMessage = async () => {
+                        // Add user message
+                        const userMessage = {
+                          id: Date.now(),
+                          text: transcript,
+                          sender: "user" as const,
+                        };
+
+                        setMessages((prev) => [...prev, userMessage]);
+                        setIsLoading(true);
+
+                        try {
+                          // Send message to backend API with voice type
+                          const response = await fetch('/api/v1/chat/send', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                              content: transcript,
+                              message_type: 'voice',
+                              conversation_id: selectedConversationId || undefined,
+                            }),
+                          });
+
+                          if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                          }
+
+                          const data = await response.json();
+
+                          // Update the selected conversation ID if it was created
+                          if (data.conversation_id && !selectedConversationId) {
+                            setSelectedConversationId(data.conversation_id);
+                            // Refresh the conversation list
+                            loadConversations();
+                          }
+
+                          // Add AI response
+                          const botResponse = {
+                            id: Date.now() + 1,
+                            text: data.response || "I processed your voice request successfully.",
+                            sender: "bot" as const,
+                          };
+
+                          setMessages((prev) => [...prev, botResponse]);
+                        } catch (error: any) {
+                          console.error('Error sending voice message:', error);
+
+                          // Set error state
+                          setError(error.message || 'Sorry, I encountered an error processing your voice request. Please try again.');
+
+                          // Add error message
+                          const errorMessage = {
+                            id: Date.now() + 1,
+                            text: error.message || "Sorry, I encountered an error processing your voice request. Please try again.",
+                            sender: "bot" as const,
+                          };
+
+                          setMessages((prev) => [...prev, errorMessage]);
+                        } finally {
+                          setIsLoading(false);
+                        }
+                      };
+
+                      handleVoiceSendMessage();
+                    }
+                  }}
+                  disabled={isLoading}
+                />
+              </div>
             </div>
 
             {/* Suggestions */}

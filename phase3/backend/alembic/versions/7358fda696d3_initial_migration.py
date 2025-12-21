@@ -1,7 +1,7 @@
 """Initial migration
 
 Revision ID: 7358fda696d3
-Revises: 
+Revises:
 Create Date: 2025-12-11 01:59:26.613792
 
 """
@@ -9,6 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+import sqlmodel  # Add missing import
 
 
 # revision identifiers, used by Alembic.

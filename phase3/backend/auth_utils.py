@@ -4,7 +4,9 @@ from pydantic import BaseModel
 from typing import Optional
 from uuid import UUID
 
-from src.config import SECRET_KEY, ALGORITHM
+from src.config import settings
+SECRET_KEY = settings.SECRET_KEY
+ALGORITHM = settings.ALGORITHM
 
 class TokenData(BaseModel):
     email: Optional[str] = None

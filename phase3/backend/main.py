@@ -8,6 +8,13 @@ from datetime import datetime, timedelta
 from auth_utils import get_current_user, TokenData
 from routes import auth, tasks
 
+# Import chat and voice routers from the nested structure
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), 'phase3', 'backend'))
+from phase3.backend.src.api.v1.chat import router as chat_router
+from phase3.backend.src.api.v1.voice import router as voice_router
+
 app = FastAPI()
 
 # Configure logging
@@ -32,6 +39,8 @@ async def general_exception_handler(request: Request, exc: Exception):
 
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(tasks.router, prefix="/api/tasks", tags=["tasks"])
+app.include_router(chat_router)
+app.include_router(voice_router)
 
 @app.get("/")
 async def root():
