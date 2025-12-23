@@ -17,10 +17,20 @@ import json
 
 class AIAgentService:
     def __init__(self):
-        # Initialize OpenAI client with configuration
+        # Initialize OpenAI client with Google Gemini configuration
+        # Get API key from environment (try multiple possible variable names)
+        api_key = settings.google_gemini_api_key or settings.openai_api_key
+        if not api_key:
+            # Try to get from environment directly in case the config isn't reading it properly
+            import os
+            api_key = os.getenv("GOOGLE_GEMINI_API_KEY") or os.getenv("OPENAI_API_KEY")
+
+        # Use the Google OpenAI-compatible endpoint from settings
+        base_url = settings.openai_api_base
+
         self.client = OpenAI(
-            api_key=settings.openai_api_key,
-            base_url=settings.openai_api_base  # This allows using Google's API or other compatible endpoints
+            api_key=api_key,  # For Google's API, this should be the API key
+            base_url=base_url
         )
         self.model = settings.ai_model
 

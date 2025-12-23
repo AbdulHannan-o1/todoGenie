@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# Start PostgreSQL container
-echo "Starting PostgreSQL container..."
-docker compose -f docker-compose.yml up -d postgres
 
 # Start backend
 echo "Starting backend development server..."

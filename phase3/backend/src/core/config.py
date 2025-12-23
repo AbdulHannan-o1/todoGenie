@@ -12,10 +12,11 @@ class Settings(BaseSettings):
     # Better Auth settings
     better_auth_secret: str
 
-    # AI Model settings (using OpenAI-compatible API for Gemini)
-    openai_api_key: Optional[str] = None
-    ai_model: str = "gemini-2.5-flash"  # Using the model specified in the requirements
-    openai_api_base: Optional[str] = None  # For Google's API endpoint if needed
+    # AI Model settings (using OpenAI-compatible API for Google Gemini)
+    google_gemini_api_key: Optional[str] = None
+    openai_api_key: Optional[str] = None  # Alternative name for compatibility
+    ai_model: str = "gemini-2.0-flash"  # Using the model specified in the requirements
+    openai_api_base: str = "https://generativelanguage.googleapis.com/v1beta/openai/"  # Google's OpenAI-compatible endpoint
 
     # MCP Server settings
     mcp_server_port: int = 8001

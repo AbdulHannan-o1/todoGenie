@@ -1,25 +1,48 @@
 import logging
 from fastapi import FastAPI, Depends, HTTPException, status, Request
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from jose import JWTError, jwt
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, timedelta
+import asyncio
 from auth_utils import get_current_user, TokenData
 from routes import auth, tasks
 
-# Import chat and voice routers from the nested structure
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), 'phase3', 'backend'))
-from phase3.backend.src.api.v1.chat import router as chat_router
-from phase3.backend.src.api.v1.voice import router as voice_router
+# Import chat and voice routers from the flattened structure
+from src.api.v1.chat import router as chat_router
+from src.api.v1.voice import router as voice_router
+
+# Import MCP server
+from src.services.mcp_server.mcp_server import mcp_server
 
 app = FastAPI()
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, replace with specific origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+@app.on_event("startup")
+async def startup_event():
+    """Start the MCP server when the main application starts"""
+    logger.info("Starting MCP server...")
+    await mcp_server.start()
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Stop the MCP server when the main application shuts down"""
+    logger.info("Stopping MCP server...")
+    await mcp_server.stop()
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):

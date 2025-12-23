@@ -6,8 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlmodel import Session, select, SQLModel
-from models import User, Token, UserRead, UserCreate, UserLogin
-from db import get_session
+from src.models import User, UserLogin
+from src.schemas import Token, UserCreate, UserRead
+from src.db.session import get_session
 
 from src.config import settings
 SECRET_KEY = settings.SECRET_KEY

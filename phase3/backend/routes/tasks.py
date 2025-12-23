@@ -5,8 +5,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
 
-from db import get_session
-from models import Task, TaskCreate, TaskUpdate
+from src.db.session import get_session
+from src.models import Task, TaskCreate, TaskUpdate
 from auth_utils import get_current_user, TokenData
 
 router = APIRouter()

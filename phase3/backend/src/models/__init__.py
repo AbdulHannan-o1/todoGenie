@@ -33,4 +33,20 @@ class Task(SQLModel, table=True):
     ai_intent: Optional[str] = Field(default=None)  # The intent detected by AI (e.g., "add_task", "update_task")
     ai_context_id: Optional[str] = Field(default=None)  # ID of the conversation context in which task was created
 
-__all__ = ["User", "Task", "Conversation", "Message"]
+# Define UserLogin, TaskCreate, and TaskUpdate as Pydantic models (not tables, just for request validation)
+from pydantic import BaseModel
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+class TaskCreate(BaseModel):
+    title: str
+    description: Optional[str] = None
+
+class TaskUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    completed: Optional[bool] = None
+
+__all__ = ["User", "Task", "Conversation", "Message", "UserLogin", "TaskCreate", "TaskUpdate"]

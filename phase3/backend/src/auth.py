@@ -5,12 +5,12 @@ from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlmodel import Session
-from .db.session import get_session
-from .models import User
-from .services.user_service import get_user_by_email, get_user_by_username
-from .utils.hash import get_password_hash, verify_password
+from src.db.session import get_session
+from src.models import User
+from src.services.user_service import get_user_by_email, get_user_by_username
+from src.utils.hash import get_password_hash, verify_password
 
-from .config import settings
+from src.config import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -33,12 +33,12 @@ def get_current_user(token: str = Depends(oauth2_scheme), session: Session = Dep
     )
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
+        email: str = payload.get("sub")
+        if email is None:
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-    user = get_user_by_username(session, username)
+    user = get_user_by_email(session, email)
     if user is None:
         raise credentials_exception
     return user
