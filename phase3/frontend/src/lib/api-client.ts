@@ -1,12 +1,9 @@
 import axios from "axios";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || "http://localhost:8001/api";
+const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || "/api";
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
 });
 
 // Request interceptor for JWT injection
@@ -16,6 +13,12 @@ apiClient.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // Only set Content-Type to application/json if data is not FormData
+    if (config.data && !(config.data instanceof FormData)) {
+      config.headers['Content-Type'] = 'application/json';
+    }
+
     return config;
   },
   (error) => {
@@ -37,14 +40,13 @@ apiClient.interceptors.response.use(
       console.error("Status:", error.response.status);
       console.error("Headers:", error.response.headers);
 
-      // You might want to trigger a global error notification here
-      // e.g., using a toast library or a global state management
-      // if (error.response.status === 401) {
-      //   // Handle unauthorized, e.g., redirect to login
-      // }
-      // if (error.response.status === 403) {
-      //   // Handle forbidden
-      // }
+      // Check for 401 Unauthorized - might need to refresh token or redirect to login
+      if (error.response.status === 401) {
+        // Clear auth state and redirect to login
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        window.location.href = "/login"; // Redirect to login page
+      }
     } else if (error.request) {
       // The request was made but no response was received
       console.error("API Error Request:", error.request);

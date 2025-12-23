@@ -6,8 +6,6 @@ import { useAuth } from "@/context/auth-context";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import apiClient from "@/lib/api-client";
-import { userApi } from "@/lib/api/user";
 import { toast } from "sonner";
 import { Eye, EyeOff } from 'lucide-react';
 
@@ -21,7 +19,7 @@ export default function SignupPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const { login: authLogin } = useAuth();
+  const { register } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,39 +37,17 @@ export default function SignupPage() {
 
     setLoading(true);
     try {
-      // Register the user
-      await apiClient.post("/auth/register", {
-        email,
-        username, // Send username instead of name
-        password
-      });
+      const result = await register(email, password, fullName, username);
 
-      // Now log the user in automatically
-      const formData = new URLSearchParams();
-      formData.append('username', email);  // OAuth2 expects 'username' field (can be email)
-      formData.append('password', password);
-
-      const response = await apiClient.post("/auth/token", formData, {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        }
-      });
-      const { access_token } = response.data;
-
-      // Set the token in the API client so we can make authenticated requests
-      apiClient.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
-
-      // Fetch the current user's information
-      const userData = await userApi.getCurrentUser();
-
-      // Login with the actual user data including the ID
-      authLogin(access_token, userData);
-      toast.success("Registration and login successful!");
-      router.push("/home"); // Redirect to home page after successful registration and login
+      if (result.success) {
+        toast.success("Registration and login successful!");
+        router.push("/home"); // Redirect to home page after successful registration and login
+      } else {
+        toast.error(result.error || "Registration failed. Please try again.");
+      }
     } catch (error: any) {
-      const errorMessage =
-        error.response?.data?.detail || "Registration failed. Please try again.";
-      toast.error(errorMessage);
+      console.error("Registration error:", error);
+      toast.error(error.message || "An error occurred during registration.");
     } finally {
       setLoading(false);
     }
@@ -97,6 +73,7 @@ export default function SignupPage() {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+                disabled={loading}
               />
             </div>
 
@@ -110,6 +87,7 @@ export default function SignupPage() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+                disabled={loading}
               />
             </div>
 
@@ -123,6 +101,7 @@ export default function SignupPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+                disabled={loading}
               />
             </div>
 
@@ -137,11 +116,13 @@ export default function SignupPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 pr-10"
                   placeholder="Enter your password"
+                  disabled={loading}
                 />
                 <button
                   type="button"
                   className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-white"
                   onClick={() => setShowPassword(!showPassword)}
+                  disabled={loading}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -159,11 +140,13 @@ export default function SignupPage() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 pr-10"
                   placeholder="Confirm your password"
+                  disabled={loading}
                 />
                 <button
                   type="button"
                   className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-white"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  disabled={loading}
                 >
                   {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>

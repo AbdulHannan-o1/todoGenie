@@ -6,8 +6,6 @@ import { useAuth } from "@/context/auth-context";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import apiClient from "@/lib/api-client";
-import { userApi } from "@/lib/api/user";
 import { toast } from "sonner";
 import { Eye, EyeOff } from 'lucide-react';
 
@@ -17,12 +15,12 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const { isAuthenticated, isLoading, login: authLogin } = useAuth();
+  const { isAuthenticated, isLoading, login } = useAuth();
 
   useEffect(() => {
     // If user is already authenticated, redirect to dashboard
     if (!isLoading && isAuthenticated) {
-      router.push("/dashboard");
+      router.push("/home");
     }
   }, [isAuthenticated, isLoading, router]);
 
@@ -30,32 +28,17 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      // For OAuth2PasswordRequestForm, we need to send form data
-      const formData = new URLSearchParams();
-      formData.append('username', email);  // OAuth2 expects 'username' field (can be email)
-      formData.append('password', password);
+      const result = await login(email, password);
 
-      const response = await apiClient.post("/auth/token", formData, {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        }
-      });
-      const { access_token } = response.data;
-
-      // Set the token in the API client so we can make authenticated requests
-      apiClient.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
-
-      // Fetch the current user's information
-      const userData = await userApi.getCurrentUser();
-
-      // Login with the actual user data including the ID
-      authLogin(access_token, userData);
-      toast.success("Logged in successfully!");
-      router.push("/home"); // Redirect to home page after successful login
+      if (result.success) {
+        toast.success("Logged in successfully!");
+        router.push("/home"); // Redirect to home page after successful login
+      } else {
+        toast.error(result.error || "Login failed. Please try again.");
+      }
     } catch (error: any) {
-      const errorMessage =
-        error.response?.data?.detail || "Login failed. Please try again.";
-      toast.error(errorMessage);
+      console.error("Login error:", error);
+      toast.error(error.message || "An error occurred during login.");
     } finally {
       setLoading(false);
     }
@@ -86,6 +69,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+                disabled={loading}
               />
             </div>
 
@@ -100,11 +84,13 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 pr-10"
                   placeholder="Enter your password"
+                  disabled={loading}
                 />
                 <button
                   type="button"
                   className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-white"
                   onClick={() => setShowPassword(!showPassword)}
+                  disabled={loading}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -118,6 +104,7 @@ export default function LoginPage() {
                   name="remember-me"
                   type="checkbox"
                   className="h-4 w-4 rounded border-slate-600 bg-slate-700 text-cyan-600 focus:ring-cyan-500"
+                  disabled={loading}
                 />
                 <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-300">
                   Remember me

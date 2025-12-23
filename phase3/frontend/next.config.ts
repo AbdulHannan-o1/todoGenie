@@ -6,7 +6,7 @@ const ContentSecurityPolicy = `
   style-src 'self' 'unsafe-inline';
   img-src 'self' blob: data:;
   media-src 'none';
-  connect-src 'self' ${process.env.NEXT_PUBLIC_BACKEND_API_URL || "http://localhost:8001"};
+  connect-src 'self';
   font-src 'self';
 `;
 
@@ -47,11 +47,56 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   /* config options here */
+  async rewrites() {
+    return [
+      {
+        source: "/api/:user_id/tasks/:path*",
+        destination: `http://localhost:8000/api/:user_id/tasks/:path*`,
+      },
+      {
+        source: "/api/v1/chat/:path*",
+        destination: `http://localhost:8000/api/v1/chat/:path*`,
+      },
+      {
+        source: "/api/v1/voice/:path*",
+        destination: `http://localhost:8000/api/v1/voice/:path*`,
+      },
+      {
+        source: "/api/auth/:path*",
+        destination: `http://localhost:8000/api/auth/:path*`,
+      },
+      {
+        source: "/auth/:path*",
+        destination: `http://localhost:8000/api/:path*`,
+      },
+      {
+        source: "/api/tasks/:path*",
+        destination: `http://localhost:8000/api/tasks/:path*`,
+      },
+      {
+        source: "/api/users/:path*",
+        destination: `http://localhost:8000/api/users/:path*`,
+      },
+      {
+        source: "/users/:path*",
+        destination: `http://localhost:8000/api/:path*`,
+      },
+    ];
+  },
   async headers() {
     return [
       {
         source: "/:path*",
         headers: securityHeaders,
+      },
+      {
+        source: "/api/:path*",
+        headers: [
+          { key: "Access-Control-Allow-Credentials", value: "true" },
+          { key: "Access-Control-Allow-Origin", value: "*" },
+          { key: "Access-Control-Allow-Methods", value: "GET,OPTIONS,PATCH,DELETE,POST,PUT" },
+          { key: "Access-Control-Allow-Headers", value: "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization" },
+        ],
       },
     ];
   },

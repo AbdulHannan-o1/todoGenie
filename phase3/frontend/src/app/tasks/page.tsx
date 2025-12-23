@@ -106,7 +106,17 @@ export default function TasksPage() {
   const totalTasks = tasks.length;
   const completedTasks = tasks.filter(task => task.status === 'completed').length;
   const pendingTasks = totalTasks - completedTasks;
-  const overdueTasks = 0; // This would require date comparison in a real implementation
+  const overdueTasks = tasks.filter(task => {
+    if (task.status === 'completed') return false; // Don't count completed tasks as overdue
+    if (!task.due_date) return false; // Don't count tasks without due dates as overdue
+    try {
+      const dueDate = new Date(task.due_date);
+      const now = new Date();
+      return dueDate < now; // Task is overdue if due date is in the past
+    } catch (e) {
+      return false; // If date parsing fails, don't count as overdue
+    }
+  }).length;
 
   const stats = [
     { title: "Total Tasks", value: totalTasks.toString(), icon: ListTodo, color: "text-cyan-500" },

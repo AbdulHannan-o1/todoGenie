@@ -8,9 +8,10 @@ import VoiceInput from "../../components/Chat/VoiceInput";
 import { Menu, Send, Bot, User, Sparkles } from "lucide-react";
 
 export default function ChatPage() {
-  const { isAuthenticated, isLoading: authIsLoading } = useAuth();
+  const { isAuthenticated, isLoading: authIsLoading, token } = useAuth();
   const router = useRouter();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isConversationsSidebarOpen, setIsConversationsSidebarOpen] = useState(false);
   // Define types for better TypeScript support
   type Message = {
     id: number | string;
@@ -71,7 +72,11 @@ export default function ChatPage() {
   const loadConversations = async () => {
     setIsConversationsLoading(true);
     try {
-      const response = await fetch('/api/v1/chat/conversations');
+      const response = await fetch('/api/v1/chat/conversations', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        }
+      });
       if (response.ok) {
         const data = await response.json();
         setConversations(data);
@@ -85,7 +90,11 @@ export default function ChatPage() {
 
   const loadConversationHistory = async (conversationId: string) => {
     try {
-      const response = await fetch(`/api/v1/chat/conversations/${conversationId}`);
+      const response = await fetch(`/api/v1/chat/conversations/${conversationId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        }
+      });
       if (response.ok) {
         const data = await response.json();
         // Transform backend messages to frontend format
@@ -134,16 +143,19 @@ export default function ChatPage() {
 
     try {
       // Send message to backend API
-      const response = await fetch('/api/v1/chat/send', {
+      const params = new URLSearchParams({
+        content: inputMessage,
+        message_type: 'text', // or 'voice' if coming from voice input
+      });
+      if (selectedConversationId) {
+        params.append('conversation_id', selectedConversationId);
+      }
+
+      const response = await fetch(`/api/v1/chat/send?${params}`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          content: inputMessage,
-          message_type: 'text', // or 'voice' if coming from voice input
-          conversation_id: selectedConversationId || undefined,
-        }),
       });
 
       if (!response.ok) {
@@ -213,58 +225,7 @@ export default function ChatPage() {
     <div className="flex min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white">
       <Sidebar isCollapsed={isSidebarCollapsed} toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
 
-      {/* Conversations sidebar */}
-      <div className={`bg-slate-800 border-r border-slate-700 transition-all duration-300 ${isSidebarCollapsed ? 'w-0' : 'w-64 md:w-80 overflow-hidden'}`}>
-        <div className="p-4 border-b border-slate-700">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Conversations</h2>
-            <button
-              onClick={createNewConversation}
-              className="p-2 rounded-lg bg-cyan-600 hover:bg-cyan-700 transition-colors"
-            >
-              <span className="text-sm">New</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="overflow-y-auto h-[calc(100vh-120px)]">
-          {isConversationsLoading ? (
-            <div className="p-4 text-center text-slate-400">Loading conversations...</div>
-          ) : conversations.length === 0 ? (
-            <div className="p-4 text-center text-slate-400">No conversations yet</div>
-          ) : (
-            <div className="p-2">
-              {conversations.map((conversation) => (
-                <div
-                  key={conversation.id}
-                  className={`p-3 rounded-lg mb-2 cursor-pointer transition-colors ${
-                    selectedConversationId === conversation.id
-                      ? 'bg-cyan-600/20 border border-cyan-500'
-                      : 'bg-slate-700/50 hover:bg-slate-700'
-                  }`}
-                  onClick={() => setSelectedConversationId(conversation.id)}
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium truncate">
-                        {conversation.title || `Conversation ${conversation.id.substring(0, 8)}`}
-                      </h3>
-                      <p className="text-xs text-slate-400 mt-1">
-                        {conversation.message_count} {conversation.message_count === 1 ? 'message' : 'messages'}
-                      </p>
-                    </div>
-                    <span className="text-xs text-slate-500 whitespace-nowrap">
-                      {new Date(conversation.updated_at).toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <main className={`flex-1 transition-all duration-300 ${isSidebarCollapsed ? 'md:ml-16' : 'md:ml-[32rem]'}`}>
+      <main className={`flex-1 transition-all duration-300 ${isSidebarCollapsed ? 'md:ml-16' : 'md:ml-64'}`}>
         {/* Navbar */}
         <header className="sticky top-0 z-10 bg-slate-800/80 backdrop-blur-sm border-b border-slate-700">
           <div className="flex items-center justify-between p-4">
@@ -275,30 +236,48 @@ export default function ChatPage() {
               >
                 <Menu className="h-5 w-5 text-slate-300" />
               </button>
-              <div className="flex items-center">
-                <Sparkles className="h-6 w-6 text-cyan-400 mr-2" />
+              <div>
                 <h1 className="text-2xl font-bold">AI Chat Assistant</h1>
+                <p className="text-slate-400 text-sm">Ask me anything about your tasks</p>
               </div>
             </div>
-            {selectedConversationId && (
+
+            <div className="flex items-center space-x-4">
+              {/* Toggle button for conversations sidebar */}
               <button
-                onClick={() => {
-                  if (confirm('Are you sure you want to delete this conversation?')) {
-                    fetch(`/api/v1/chat/conversations/${selectedConversationId}`, {
-                      method: 'DELETE',
-                    })
-                    .then(() => {
-                      setSelectedConversationId(null);
-                      loadConversations();
-                    })
-                    .catch(error => console.error('Error deleting conversation:', error));
-                  }
-                }}
-                className="p-2 rounded-lg bg-red-600/50 hover:bg-red-600 transition-colors"
+                onClick={() => setIsConversationsSidebarOpen(!isConversationsSidebarOpen)}
+                className="p-2 rounded-lg bg-slate-700/50 hover:bg-slate-700 transition-colors"
               >
-                Delete
+                <Menu className="h-5 w-5 text-slate-300" />
               </button>
-            )}
+
+              {selectedConversationId && (
+                <button
+                  onClick={() => {
+                    if (confirm('Are you sure you want to delete this conversation?')) {
+                      fetch(`/api/v1/chat/conversations/${selectedConversationId}`, {
+                        method: 'DELETE',
+                        headers: {
+                          'Authorization': `Bearer ${token}`,
+                        },
+                      })
+                      .then(() => {
+                        setSelectedConversationId(null);
+                        loadConversations();
+                      })
+                      .catch(error => console.error('Error deleting conversation:', error));
+                    }
+                  }}
+                  className="p-2 rounded-lg bg-red-600/50 hover:bg-red-600 transition-colors"
+                >
+                  Delete
+                </button>
+              )}
+
+              <div className="w-8 h-8 rounded-full bg-cyan-600 flex items-center justify-center">
+                <Sparkles className="h-4 w-4" />
+              </div>
+            </div>
           </div>
         </header>
 
@@ -407,16 +386,19 @@ export default function ChatPage() {
 
                         try {
                           // Send message to backend API with voice type
-                          const response = await fetch('/api/v1/chat/send', {
+                          const params = new URLSearchParams({
+                            content: transcript,
+                            message_type: 'voice',
+                          });
+                          if (selectedConversationId) {
+                            params.append('conversation_id', selectedConversationId);
+                          }
+
+                          const response = await fetch(`/api/v1/chat/send?${params}`, {
                             method: 'POST',
                             headers: {
-                              'Content-Type': 'application/json',
+                              'Authorization': `Bearer ${token}`,
                             },
-                            body: JSON.stringify({
-                              content: transcript,
-                              message_type: 'voice',
-                              conversation_id: selectedConversationId || undefined,
-                            }),
                           });
 
                           if (!response.ok) {
@@ -484,6 +466,72 @@ export default function ChatPage() {
                 </button>
               ))}
             </div>
+          </div>
+        </div>
+
+        {/* Conversations sidebar - appears on the right when toggled */}
+        <div className={`fixed top-0 right-0 h-full bg-slate-800 border-l border-slate-700 z-50 transform transition-transform duration-300 ease-in-out ${
+          isConversationsSidebarOpen ? 'translate-x-0 w-64 md:w-80' : 'translate-x-full w-64 md:w-80'
+        }`}>
+          <div className="p-4 border-b border-slate-700 flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Conversations</h2>
+            <button
+              onClick={() => setIsConversationsSidebarOpen(false)}
+              className="p-1 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors"
+            >
+              <span className="text-lg">×</span>
+            </button>
+          </div>
+
+          <div className="p-4 border-b border-slate-700">
+            <button
+              onClick={() => {
+                createNewConversation();
+                setIsConversationsSidebarOpen(false); // Close sidebar after creating new conversation
+              }}
+              className="w-full py-2 rounded-lg bg-cyan-600 hover:bg-cyan-700 transition-colors font-medium"
+            >
+              + New Chat
+            </button>
+          </div>
+
+          <div className="overflow-y-auto h-[calc(100vh-145px)]">
+            {isConversationsLoading ? (
+              <div className="p-4 text-center text-slate-400">Loading conversations...</div>
+            ) : conversations.length === 0 ? (
+              <div className="p-4 text-center text-slate-400">No conversations yet</div>
+            ) : (
+              <div className="p-2">
+                {conversations.map((conversation) => (
+                  <div
+                    key={conversation.id}
+                    className={`p-3 rounded-lg mb-2 cursor-pointer transition-colors ${
+                      selectedConversationId === conversation.id
+                        ? 'bg-cyan-600/20 border border-cyan-500'
+                        : 'bg-slate-700/50 hover:bg-slate-700'
+                    }`}
+                    onClick={() => {
+                      setSelectedConversationId(conversation.id);
+                      setIsConversationsSidebarOpen(false); // Close sidebar after selection
+                    }}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium truncate">
+                          {conversation.title || `Conversation ${conversation.id.substring(0, 8)}`}
+                        </h3>
+                        <p className="text-xs text-slate-400 mt-1">
+                          {conversation.message_count} {conversation.message_count === 1 ? 'message' : 'messages'}
+                        </p>
+                      </div>
+                      <span className="text-xs text-slate-500 whitespace-nowrap">
+                        {new Date(conversation.updated_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </main>
