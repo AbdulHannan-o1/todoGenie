@@ -1,0 +1,10 @@
+# Ignore artifacts:
+.next/
+out/
+build/
+
+# Ignore dependencies:
+node_modules/
+
+# Ignore generated files:
+coverage/

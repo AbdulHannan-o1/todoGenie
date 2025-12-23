@@ -1,0 +1,328 @@
+# API Contract: AI Chatbot Voice Support
+
+## OpenAPI Specification for Chatbot Endpoints
+
+```yaml
+openapi: 3.0.3
+info:
+  title: AI Chatbot Voice Support API
+  description: API endpoints for AI-powered todo chatbot with voice support
+  version: 1.0.0
+servers:
+  - url: http://localhost:8000
+    description: Development server
+  - url: https://api.yourapp.com
+    description: Production server
+
+paths:
+  /api/v1/chat/conversations:
+    get:
+      summary: List user conversations
+      description: Retrieve all conversations for the authenticated user
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of conversations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  conversations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Conversation'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    post:
+      summary: Create new conversation
+      description: Start a new conversation thread
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  description: Optional title for the conversation
+      responses:
+        '201':
+          description: Conversation created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/chat/conversations/{conversation_id}:
+    get:
+      summary: Get conversation details
+      description: Retrieve a specific conversation and its messages
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Conversation details with messages
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  conversation:
+                    $ref: '#/components/schemas/Conversation'
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Message'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/chat/conversations/{conversation_id}/messages:
+    get:
+      summary: Get conversation messages
+      description: Retrieve all messages in a specific conversation
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of messages in the conversation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Message'
+                  total:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/chat/send:
+    post:
+      summary: Send message to chatbot
+      description: Send a text or voice-converted message to the AI chatbot
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+                - message_type
+              properties:
+                content:
+                  type: string
+                  description: The message content (text from user input or voice-to-text conversion)
+                message_type:
+                  type: string
+                  enum: [text, voice]
+                  description: The type of input
+                conversation_id:
+                  type: string
+                  format: uuid
+                  description: Optional conversation ID to continue existing conversation
+                metadata:
+                  type: object
+                  description: Additional metadata about the message
+      responses:
+        '200':
+          description: AI response to the message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  response:
+                    type: string
+                    description: The AI's response text
+                  conversation_id:
+                    type: string
+                    format: uuid
+                    description: The conversation ID (new or existing)
+                  task_operations:
+                    type: array
+                    description: Any task operations performed as a result of the message
+                    items:
+                      type: object
+                      properties:
+                        operation:
+                          type: string
+                          enum: [create, update, delete, complete, list]
+                        task_id:
+                          type: string
+                          format: uuid
+                        result:
+                          type: string
+                          description: Result of the operation
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/chat/voice-recognize:
+    post:
+      summary: Convert voice to text
+      description: Endpoint to convert voice data to text (server-side processing if needed)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - audio_data
+              properties:
+                audio_data:
+                  type: string
+                  description: Base64 encoded audio data
+                format:
+                  type: string
+                  enum: [wav, mp3, ogg, flac]
+                  default: wav
+      responses:
+        '200':
+          description: Text transcription of the audio
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  text:
+                    type: string
+                    description: The transcribed text
+                  confidence:
+                    type: number
+                    format: float
+                    description: Confidence score of the transcription
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        conversation_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+        message_type:
+          type: string
+          enum: [text, voice]
+        created_at:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+
+  responses:
+    UnauthorizedError:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+```
