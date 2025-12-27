@@ -6,7 +6,7 @@ const ContentSecurityPolicy = `
   style-src 'self' 'unsafe-inline';
   img-src 'self' blob: data:;
   media-src 'none';
-  connect-src 'self';
+  connect-src 'self' http://localhost:8000;
   font-src 'self';
 `;
 
@@ -67,11 +67,15 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/auth/:path*",
-        destination: `http://localhost:8000/api/:path*`,
+        destination: `http://localhost:8000/auth/:path*`,
       },
       {
         source: "/api/tasks/:path*",
         destination: `http://localhost:8000/api/tasks/:path*`,
+      },
+      {
+        source: "/:user_id/tasks/:path*",
+        destination: `http://localhost:8000/api/:user_id/tasks/:path*`,
       },
       {
         source: "/api/users/:path*",
@@ -79,7 +83,7 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/users/:path*",
-        destination: `http://localhost:8000/api/:path*`,
+        destination: `http://localhost:8000/api/users/:path*`,
       },
     ];
   },

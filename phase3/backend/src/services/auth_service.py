@@ -16,5 +16,5 @@ def authenticate_user(session: Session, identifier: str, password: str) -> Optio
     return user
 
 def create_user_access_token(user: User, expires_delta: Optional[timedelta] = None) -> str:
-    data = {"sub": user.username}
+    data = {"sub": user.email, "user_id": str(user.id)}
     return create_access_token(data=data, expires_delta=expires_delta)

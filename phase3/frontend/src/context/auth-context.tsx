@@ -56,34 +56,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await authClient.login(email, password);
       const { access_token } = response;
 
-      // Fetch user profile to get user details
-      // Temporarily set the token in the API client to fetch user data
-      const originalToken = apiClient.defaults.headers.common['Authorization'];
-      apiClient.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+      // Store the token in localStorage first so the interceptor can use it
+      localStorage.setItem("token", access_token);
 
       let userData;
       try {
         userData = await authClient.getProfile();
       } catch (error) {
         console.error("Failed to fetch user profile:", error);
-        // Restore original token
-        if (originalToken) {
-          apiClient.defaults.headers.common['Authorization'] = originalToken;
-        } else {
-          delete apiClient.defaults.headers.common['Authorization'];
-        }
+        // Clear the token if profile fetch fails
+        localStorage.removeItem("token");
         return { success: false, error: "Failed to fetch user profile" };
       }
 
-      // Restore original token if it existed
-      if (originalToken) {
-        apiClient.defaults.headers.common['Authorization'] = originalToken;
-      } else {
-        delete apiClient.defaults.headers.common['Authorization'];
-      }
-
-      // Store token and user in localStorage and state
-      localStorage.setItem("token", access_token);
+      // Store user in localStorage and state
       localStorage.setItem("user", JSON.stringify(userData));
       setToken(access_token);
       setUser(userData);

@@ -15,7 +15,7 @@ export const authClient = {
     loginData.append('username', email);  // Backend expects 'username' field (but will treat as email)
     loginData.append('password', password);
 
-    const response = await apiClient.post("/auth/token", loginData);
+    const response = await apiClient.post("/api/auth/token", loginData);
     return response.data;
   },
 
@@ -34,14 +34,7 @@ export const authClient = {
   refreshToken: async () => {
     // In a real implementation, you might have a refresh token endpoint
     // For now, we'll just return a method that could be used for token refresh
-    const refreshToken = localStorage.getItem("refreshToken");
-    if (!refreshToken) {
-      throw new Error("No refresh token available");
-    }
-
-    const response = await apiClient.post("/auth/refresh", {
-      refresh_token: refreshToken
-    });
-    return response.data;
+    // Currently, refresh endpoint doesn't exist in the backend
+    throw new Error("Refresh token endpoint not implemented");
   }
 };
