@@ -1,5 +1,5 @@
 """
-AI Agent service for processing natural language commands using OpenAI-compatible API
+AI Agent service for processing natural language commands using z.ai GLM OpenAI-compatible API
 """
 import asyncio
 import time
@@ -17,19 +17,19 @@ import json
 
 class AIAgentService:
     def __init__(self):
-        # Initialize OpenAI client with Google Gemini configuration
+        # Initialize OpenAI client with z.ai GLM configuration
         # Get API key from environment (try multiple possible variable names)
-        api_key = settings.google_gemini_api_key or settings.openai_api_key
+        api_key = settings.zai_api_key or settings.google_gemini_api_key or settings.openai_api_key
         if not api_key:
             # Try to get from environment directly in case the config isn't reading it properly
             import os
-            api_key = os.getenv("GOOGLE_GEMINI_API_KEY") or os.getenv("OPENAI_API_KEY")
+            api_key = os.getenv("ZAI_API_KEY") or os.getenv("GOOGLE_GEMINI_API_KEY") or os.getenv("OPENAI_API_KEY")
 
-        # Use the Google OpenAI-compatible endpoint from settings
+        # Use the z.ai OpenAI-compatible endpoint from settings
         base_url = settings.openai_api_base
 
         self.client = OpenAI(
-            api_key=api_key,  # For Google's API, this should be the API key
+            api_key=api_key,  # For z.ai's API, this should be the API key
             base_url=base_url
         )
         self.model = settings.ai_model
@@ -197,12 +197,19 @@ class AIAgentService:
                         }
 
                     # Log tool execution
+                    # Determine success based on whether result is a dict with status != "error"
+                    # or if it's a list (like from list_tasks), assume success
+                    is_success = True
+                    if isinstance(result, dict):
+                        is_success = result.get("status") != "error"
+                    # For lists (like from list_tasks), we consider it successful if no exception occurred
+
                     ai_logger.log_tool_execution(
                         user_id=user_id,
                         conversation_id=conversation_id or "unknown",
                         tool_name=function_name,
                         tool_params=function_args,
-                        success=result.get("status") != "error",
+                        success=is_success,
                         execution_time=0.0  # We could add more precise timing if needed
                     )
 

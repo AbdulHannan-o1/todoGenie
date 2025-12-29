@@ -11,6 +11,7 @@ from src.schemas import Token, UserCreate, UserRead
 from src.db.session import get_session
 
 from src.config import settings
+
 SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = settings.ALGORITHM
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES

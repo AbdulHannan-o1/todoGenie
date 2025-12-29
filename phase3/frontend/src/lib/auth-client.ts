@@ -2,7 +2,7 @@ import apiClient from "./api-client";
 
 export const authClient = {
   register: async (email: string, password: string, username: string) => {
-    const response = await apiClient.post("/auth/register", {
+    const response = await apiClient.post("/api/auth/register", {
       email,
       password,
       username // Backend expects username field
@@ -11,23 +11,43 @@ export const authClient = {
   },
 
   login: async (email: string, password: string) => {
-    const loginData = new FormData();
-    loginData.append('username', email);  // Backend expects 'username' field (but will treat as email)
-    loginData.append('password', password);
+    // Create form data for OAuth2PasswordRequestForm
+    const formData = new FormData();
+    formData.append('username', email);
+    formData.append('password', password);
 
-    const response = await apiClient.post("/api/auth/token", loginData);
+    const response = await apiClient.post("/api/auth/token", formData, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    });
+    // Store the token in localStorage for use in other API calls
+    if (response.data && response.data.access_token) {
+      localStorage.setItem('token', response.data.access_token);
+
+      // Get user profile to store user ID
+      try {
+        const profileResponse = await apiClient.get("/api/users/me");
+        if (profileResponse.data && profileResponse.data.id) {
+          localStorage.setItem('user', JSON.stringify(profileResponse.data));
+        }
+      } catch (error) {
+        console.error("Error fetching user profile after login:", error);
+      }
+    }
     return response.data;
   },
 
   logout: async () => {
     // For stateless JWTs, logout means clearing the client-side token
     // The backend doesn't need to do anything since tokens are stateless
-    // We'll just return a success response
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     return { success: true };
   },
 
   getProfile: async () => {
-    const response = await apiClient.get("/users/me");
+    const response = await apiClient.get("/api/users/me");
     return response.data;
   },
 

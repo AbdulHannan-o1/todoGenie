@@ -3,7 +3,9 @@ from src.models import User
 from src.utils import get_password_hash, verify_password
 
 def create_db_user(user_data: dict, session: Session):
-    user = User(email=user_data["email"], hashed_password=get_password_hash(user_data["password"]))
+    # Use email as username if no username is provided
+    username = user_data.get("username", user_data["email"])
+    user = User(email=user_data["email"], username=username, hashed_password=get_password_hash(user_data["password"]))
     session.add(user)
     session.commit()
     session.refresh(user)

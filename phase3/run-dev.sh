@@ -4,9 +4,15 @@
 # Start backend
 echo "Starting backend development server..."
 cd backend
-python -m venv venv
+# Check if virtual environment exists, create if not
+if [ ! -d "venv" ]; then
+    python -m venv venv
+fi
 source venv/bin/activate
-uvicorn main:app --reload --port 8000 &
+# Install dependencies if not already installed
+pip install -r requirements.txt
+# Start the backend server with the correct module path
+uvicorn src.main:app --reload --port 8000 &
 BACKEND_PID=$!
 cd ..
 

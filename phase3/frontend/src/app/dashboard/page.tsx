@@ -60,7 +60,6 @@ export default function DashboardPage() {
       setLoading(true);
       if (user?.id) {
         const tasksData = await taskApi.getTasks(
-          user.id,
           searchTerm || undefined,
           priorityFilter || undefined,
           statusFilter || undefined
@@ -81,7 +80,7 @@ export default function DashboardPage() {
         const newStatus = task.status === 'completed' ? 'pending' : 'completed';
 
         // Update the task with the new status, including required fields
-        const updatedTask = await taskApi.updateTask(user.id, task.id, {
+        const updatedTask = await taskApi.updateTask(task.id, {
           title: task.title, // Required field
           status: newStatus
         });
@@ -103,7 +102,7 @@ export default function DashboardPage() {
   const handleDeleteTask = async (taskId: string) => {
     try {
       if (user?.id) {
-        await taskApi.deleteTask(user.id, taskId);
+        await taskApi.deleteTask(taskId);
         setTasks(tasks.filter(task => task.id !== taskId));
       }
     } catch (error) {

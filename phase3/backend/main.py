@@ -7,7 +7,8 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, timedelta
 import asyncio
-from auth_utils import get_current_user, TokenData
+from src.auth import get_current_user
+from src.models import User
 from routes import auth, tasks
 
 # Import chat and voice routers from the flattened structure
@@ -70,5 +71,11 @@ async def root():
     return {"message": "Welcome to Todo Genie API"}
 
 @app.get("/users/me/")
-async def read_users_me(current_user: TokenData = Depends(get_current_user)):
-    return {"message": f"Hello {current_user.email}, you are authenticated!"}
+async def read_users_me(current_user: User = Depends(get_current_user)):
+    # Return user data in a format that matches the frontend's expectations
+    return {
+        "id": str(current_user.id),
+        "email": current_user.email,
+        "username": current_user.username,
+        "status": current_user.status
+    }

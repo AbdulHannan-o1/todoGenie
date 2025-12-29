@@ -2,6 +2,8 @@ import axios from "axios";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || "";
 
+export const getBaseURL = () => API_BASE_URL;
+
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
 });

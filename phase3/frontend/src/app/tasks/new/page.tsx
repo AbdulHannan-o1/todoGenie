@@ -57,7 +57,7 @@ export default function NewTaskPage() {
         due_date: formData.due_date || undefined, // Send undefined if empty to use backend default
         tags: formData.tags || undefined, // Send undefined if empty to use backend default
         status: "pending"
-      }, user.id);
+      });
 
       toast.success("Task created successfully!");
       router.push("/dashboard");

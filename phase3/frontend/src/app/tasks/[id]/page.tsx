@@ -57,7 +57,7 @@ export default function EditTaskPage({ params }: EditTaskPageProps) {
   const fetchTask = async () => {
     try {
       if (user?.id) {
-        const task: Task = await taskApi.getTaskById(user.id, taskId);
+        const task: Task = await taskApi.getTaskById(taskId);
         setFormData({
           title: task.title,
           description: task.description || "",
@@ -93,7 +93,7 @@ export default function EditTaskPage({ params }: EditTaskPageProps) {
 
     setSubmitting(true);
     try {
-      await taskApi.updateTask(user.id, taskId, {
+      await taskApi.updateTask(taskId, {
         title: formData.title, // Required field
         description: formData.description,
         status: formData.completed ? 'completed' : 'pending',
