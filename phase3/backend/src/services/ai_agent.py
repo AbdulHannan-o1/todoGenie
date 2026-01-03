@@ -17,19 +17,27 @@ import json
 
 class AIAgentService:
     def __init__(self):
-        # Initialize OpenAI client with z.ai GLM configuration
-        # Get API key from environment (try multiple possible variable names)
-        api_key = settings.zai_api_key or settings.google_gemini_api_key or settings.openai_api_key
-        if not api_key:
-            # Try to get from environment directly in case the config isn't reading it properly
-            import os
-            api_key = os.getenv("ZAI_API_KEY") or os.getenv("GOOGLE_GEMINI_API_KEY") or os.getenv("OPENAI_API_KEY")
-
-        # Use the z.ai OpenAI-compatible endpoint from settings
+        # Initialize OpenAI client with appropriate API key based on base URL
+        import os
         base_url = settings.openai_api_base
 
+        # Select the right API key based on the base URL
+        if "groq.com" in base_url:
+            api_key = settings.groq_api_key or os.getenv("GROQ_API_KEY")
+        elif "trybons.ai" in base_url:
+            api_key = settings.bonsai_api_key or os.getenv("BONSAI_API_KEY")
+        elif "openrouter.ai" in base_url:
+            api_key = settings.openrouter_api_key or os.getenv("OPENROUTER_API_KEY")
+        elif "bigmodel.cn" in base_url:
+            api_key = settings.zai_api_key or os.getenv("ZAI_API_KEY")
+        else:
+            # Fallback: try all keys in order
+            api_key = settings.openai_api_key or settings.groq_api_key or settings.bonsai_api_key or settings.openrouter_api_key
+            if not api_key:
+                api_key = os.getenv("OPENAI_API_KEY") or os.getenv("GROQ_API_KEY") or os.getenv("BONSAI_API_KEY") or os.getenv("OPENROUTER_API_KEY")
+
         self.client = OpenAI(
-            api_key=api_key,  # For z.ai's API, this should be the API key
+            api_key=api_key,
             base_url=base_url
         )
         self.model = settings.ai_model
@@ -62,8 +70,11 @@ class AIAgentService:
                         "parameters": {
                             "type": "object",
                             "properties": {
-                                "title": {"type": "string", "description": "The task title"},
-                                "description": {"type": "string", "description": "The task description"},
+                                "title": {"type": "string", "description": "Task title"},
+                                "description": {"type": "string", "description": "Task description"},
+                                "tags": {"type": "string", "description": "Tags (comma-separated)"},
+                                "priority": {"type": "string", "description": "Priority: low, medium, high"},
+                                "due_date": {"type": "string", "description": "Due date (ISO format)"},
                             },
                             "required": ["title"],
                         },
@@ -131,18 +142,16 @@ class AIAgentService:
             system_message = {
                 "role": "system",
                 "content": (
-                    "You are a helpful AI assistant that helps users manage their tasks. "
-                    "You can create, list, update, delete, and mark tasks as complete. "
-                    "Always try to understand the user's intent and call the appropriate function. "
-                    "If you're not sure about specific task IDs, ask the user to clarify. "
-                    "Validate task IDs before performing operations and handle errors gracefully. "
-                    "If a task ID is invalid or not found, inform the user and suggest listing tasks first. "
-                    "For voice input, the user may speak in a more conversational tone, so interpret accordingly. "
-                    "When a user says something like 'remind me to buy groceries' or 'add a task to call mom', "
-                    "understand that they want to create a task. "
-                    "When they say 'show my tasks' or 'what do I have to do', they want to list tasks. "
-                    "When they say 'mark task 3 as done' or 'complete the meeting task', they want to complete a task. "
-                    "Always provide helpful and clear feedback to the user about the results of their requests."
+                    "You are a task management AI assistant. You can create, list, update, delete, and complete tasks.\n\n"
+                    "IMPORTANT: When creating tasks, map user input to the correct fields:\n"
+                    "- title: Main task name\n"
+                    "- description: Details about the task\n"
+                    "- tags: Categories (comma-separated)\n"
+                    "- priority: low, medium, or high\n"
+                    "- due_date: Date in ISO format\n\n"
+                    "NEVER put tags, priority, or dates in description. Use the specific fields.\n\n"
+                    "For operations on existing tasks (complete, update, delete), call list_tasks() first to get the task ID, "
+                    "then use that ID in the next function call."
                 )
             }
 
@@ -152,26 +161,73 @@ class AIAgentService:
                 "content": message
             }
 
-            # Call the OpenAI API with function calling
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[system_message, user_message],
-                tools=tools,
-                tool_choice="auto",
-                max_tokens=500,
-                temperature=0.7,
-            )
+            # Agentic loop: keep calling the AI until it stops making tool calls
+            messages = [system_message, user_message]
+            max_iterations = 5  # Prevent infinite loops
+            all_tool_results = []
 
-            # Process the response
-            response_message = response.choices[0].message
-            tool_calls = response_message.tool_calls
+            for iteration in range(max_iterations):
+                try:
+                    response = self.client.chat.completions.create(
+                        model=self.model,
+                        messages=messages,
+                        tools=tools,
+                        tool_choice="auto",
+                        max_tokens=500,
+                        temperature=0.7,
+                    )
+                except Exception as api_error:
+                    # Check if this is a tool_use_failed error
+                    error_str = str(api_error)
+                    if "tool_use_failed" in error_str or "Failed to call a function" in error_str:
+                        # Model had trouble with function calling format - retry without tools
+                        simple_response = self.client.chat.completions.create(
+                            model=self.model,
+                            messages=messages,
+                            max_tokens=500,
+                            temperature=0.7,
+                        )
+                        final_response_text = simple_response.choices[0].message.content
+                        processing_time = time.time() - start_time
 
-            if tool_calls:
-                # Execute the tool calls
-                results = []
+                        ai_logger.log_ai_response(
+                            user_id=user_id,
+                            conversation_id=conversation_id or "unknown",
+                            request_content=message,
+                            response_content=final_response_text,
+                            processing_time=processing_time,
+                            success=True,
+                            tool_results=[]
+                        )
+
+                        return {
+                            "response": final_response_text,
+                            "tool_results": [],
+                            "success": True
+                        }
+                    else:
+                        # Re-raise other errors
+                        raise api_error
+
+                # Process the response
+                response_message = response.choices[0].message
+                tool_calls = response_message.tool_calls
+
+                # If no tool calls, we're done with the loop
+                if not tool_calls:
+                    break
+
+                # Add assistant's message to conversation
+                messages.append(response_message)
+
+                # Execute all tool calls in this iteration
                 for tool_call in tool_calls:
                     function_name = tool_call.function.name
                     function_args = json.loads(tool_call.function.arguments)
+
+                    # Handle null arguments (for functions that don't require args like list_tasks)
+                    if function_args is None:
+                        function_args = {}
 
                     # Add user_id to the function arguments where needed
                     function_args["user_id"] = user_id
@@ -187,7 +243,9 @@ class AIAgentService:
                         elif function_name == "delete_task":
                             result = delete_task_tool(**function_args)
                         elif function_name == "complete_task":
-                            result = complete_task_tool(**function_args)
+                            # complete_task doesn't need user_id, so we exclude it
+                            task_args = {k: v for k, v in function_args.items() if k != "user_id"}
+                            result = complete_task_tool(**task_args)
                         else:
                             result = {"status": "error", "message": f"Unknown function: {function_name}"}
                     except Exception as tool_error:
@@ -210,69 +268,39 @@ class AIAgentService:
                         tool_name=function_name,
                         tool_params=function_args,
                         success=is_success,
-                        execution_time=0.0  # We could add more precise timing if needed
+                        execution_time=0.0
                     )
 
-                    results.append({
-                        "tool_call_id": tool_call.id,
-                        "result": result
+                    all_tool_results.append({"tool": function_name, "result": result})
+
+                    # Add tool response to messages for next iteration
+                    messages.append({
+                        "role": "tool",
+                        "content": json.dumps(result),
+                        "tool_call_id": tool_call.id
                     })
 
-                # Get a final response from the AI based on the tool results
-                final_response = self.client.chat.completions.create(
-                    model=self.model,
-                    messages=[
-                        system_message,
-                        user_message,
-                        response_message,
-                        {
-                            "role": "tool",
-                            "content": json.dumps([r["result"] for r in results]),
-                            "tool_call_id": results[0]["tool_call_id"] if results else ""
-                        }
-                    ],
-                    max_tokens=300,
-                    temperature=0.7,
-                )
+            # After loop completes, get final response text
+            final_response_text = response_message.content if response_message and response_message.content else "Task completed successfully."
 
-                processing_time = time.time() - start_time
+            processing_time = time.time() - start_time
 
-                # Log the AI response
-                ai_logger.log_ai_response(
-                    user_id=user_id,
-                    conversation_id=conversation_id or "unknown",
-                    request_content=message,
-                    response_content=final_response.choices[0].message.content,
-                    processing_time=processing_time,
-                    success=True,
-                    tool_results=results
-                )
+            # Log the AI response
+            ai_logger.log_ai_response(
+                user_id=user_id,
+                conversation_id=conversation_id or "unknown",
+                request_content=message,
+                response_content=final_response_text,
+                processing_time=processing_time,
+                success=True,
+                tool_results=all_tool_results
+            )
 
-                return {
-                    "response": final_response.choices[0].message.content,
-                    "tool_results": [r["result"] for r in results],
-                    "success": True
-                }
-            else:
-                # If no tool calls were made, return the AI's direct response
-                processing_time = time.time() - start_time
-
-                # Log the AI response (without tools)
-                ai_logger.log_ai_response(
-                    user_id=user_id,
-                    conversation_id=conversation_id or "unknown",
-                    request_content=message,
-                    response_content=response_message.content,
-                    processing_time=processing_time,
-                    success=True,
-                    tool_results=[]
-                )
-
-                return {
-                    "response": response_message.content,
-                    "tool_results": [],
-                    "success": True
-                }
+            return {
+                "response": final_response_text,
+                "tool_results": [r["result"] for r in all_tool_results],
+                "success": True
+            }
 
         except Exception as e:
             processing_time = time.time() - start_time

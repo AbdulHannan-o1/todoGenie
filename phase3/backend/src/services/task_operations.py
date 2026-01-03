@@ -11,7 +11,9 @@ from src.models.conversation import Message
 
 class TaskOperationsService:
     @staticmethod
-    def create_task(title: str, description: Optional[str], user_id: str) -> Dict[str, Any]:
+    def create_task(title: str, description: Optional[str], user_id: str,
+                   tags: Optional[str] = None, priority: Optional[str] = None,
+                   due_date: Optional[str] = None) -> Dict[str, Any]:
         """
         Create a new task for the user
         """
@@ -19,11 +21,28 @@ class TaskOperationsService:
             with next(get_session()) as session:
                 user_uuid = UUID(user_id)
 
+                # Validate priority if provided
+                if priority and priority.lower() not in ["low", "medium", "high"]:
+                    priority = None  # Ignore invalid priority
+
+                # Parse due_date if provided
+                due_date_obj = None
+                if due_date:
+                    from datetime import datetime
+                    try:
+                        due_date_obj = datetime.fromisoformat(due_date.replace('Z', '+00:00'))
+                    except (ValueError, AttributeError):
+                        # If date parsing fails, ignore it
+                        pass
+
                 # Create new task
                 task = Task(
                     title=title,
                     description=description,
                     user_id=user_uuid,
+                    tags=tags or "",
+                    priority=priority.lower() if priority else None,
+                    due_date=due_date_obj,
                     ai_generated=True,  # Mark as AI-generated
                     ai_intent="create_task"
                 )

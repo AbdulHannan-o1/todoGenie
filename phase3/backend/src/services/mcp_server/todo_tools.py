@@ -28,11 +28,13 @@ class TaskCompleteRequest(BaseModel):
     completed: bool = True
 
 
-def create_task_tool(title: str, description: Optional[str] = None, user_id: str = "") -> Dict:
+def create_task_tool(title: str, description: Optional[str] = None, user_id: str = "",
+                    tags: Optional[str] = None, priority: Optional[str] = None,
+                    due_date: Optional[str] = None) -> Dict:
     """
-    Create a new task via tool
+    Create a new task via tool with optional tags, priority, and due_date
     """
-    return TaskOperationsService.create_task(title, description, user_id)
+    return TaskOperationsService.create_task(title, description, user_id, tags, priority, due_date)
 
 
 def list_tasks_tool(user_id: str = "") -> List[Dict]:

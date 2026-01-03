@@ -80,6 +80,12 @@ export default function ChatPage() {
       if (response.ok) {
         const data = await response.json();
         setConversations(data);
+
+        // Auto-select the most recent conversation if one exists and no conversation is currently selected
+        if (data.length > 0 && !selectedConversationId) {
+          // Conversations are ordered by updated_at desc, so first one is most recent
+          setSelectedConversationId(data[0].id);
+        }
       }
     } catch (error) {
       console.error('Error loading conversations:', error);

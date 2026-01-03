@@ -12,12 +12,15 @@ class Settings(BaseSettings):
     # Better Auth settings
     better_auth_secret: str
 
-    # AI Model settings (using OpenAI-compatible API for z.ai GLM)
+    # AI Model settings (using Bonsai's free Claude API - best for function calling)
+    openrouter_api_key: Optional[str] = None
     zai_api_key: Optional[str] = None
     google_gemini_api_key: Optional[str] = None  # Alternative name for backward compatibility
     openai_api_key: Optional[str] = None  # Alternative name for compatibility
-    ai_model: str = "glm-4.7"  # Using z.ai GLM model
-    openai_api_base: str = "https://api.z.ai/api/paas/v4/"  # z.ai OpenAI-compatible endpoint
+    groq_api_key: Optional[str] = None  # Groq API key for fast inference
+    bonsai_api_key: Optional[str] = None  # Bonsai API key for Claude models
+    ai_model: str = "llama-3.3-70b-versatile"  # Using Groq's Llama 3.3 70B Versatile (supports function calling)
+    openai_api_base: str = "https://api.groq.com/openai/v1"  # Groq OpenAI-compatible endpoint
 
     # MCP Server settings
     mcp_server_port: int = 8001

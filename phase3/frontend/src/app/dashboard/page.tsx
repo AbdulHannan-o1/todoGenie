@@ -112,7 +112,7 @@ export default function DashboardPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800 text-white">
+      <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-slate-900 to-slate-800 text-white">
         Loading or redirecting...
       </div>
     );
@@ -145,7 +145,7 @@ export default function DashboardPage() {
   const filteredTasks = tasks;
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white">
+    <div className="flex min-h-screen bg-linear-to-br from-slate-900 to-slate-800 text-white">
       <Sidebar isCollapsed={isSidebarCollapsed} toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
 
       <main className={`flex-1 transition-all duration-300 ${isSidebarCollapsed ? 'md:ml-16' : 'md:ml-64'}`}>

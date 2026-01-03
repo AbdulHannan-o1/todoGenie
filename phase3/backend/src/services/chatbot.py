@@ -158,8 +158,11 @@ class ChatbotService:
         """
         Save a message to the conversation
         """
-        # Validate and sanitize content
-        sanitized_content = validate_input_text(content, max_length=5000)  # Reasonable limit for messages
+        # Validate and sanitize content (allow empty for assistant messages that only call tools)
+        if role == "assistant" and (not content or content.strip() == ""):
+            sanitized_content = "[Tool call - no text response]"
+        else:
+            sanitized_content = validate_input_text(content, max_length=5000)  # Reasonable limit for messages
         validated_message_type = message_type.lower() if message_type.lower() in ["text", "voice"] else "text"
         validated_role = role.lower() if role.lower() in ["user", "assistant", "system"] else "user"
 

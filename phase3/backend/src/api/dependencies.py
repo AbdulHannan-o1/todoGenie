@@ -5,7 +5,7 @@ from fastapi import Depends, HTTPException, status
 
 from src.auth import get_current_user, oauth2_scheme
 from src.models import User
-from src.db import get_session
+from src.db.session import get_session
 from src.services.user_service import get_user_by_email
 from src.config import settings
 from jose import JWTError, jwt
