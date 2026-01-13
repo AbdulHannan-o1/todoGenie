@@ -29,12 +29,10 @@ export default function ChatPage() {
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<Message[]>([
-    { id: 1, text: "Hello! I'm your AI assistant. How can I help you with your tasks today?", sender: "bot" },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isConversationsLoading, setIsConversationsLoading] = useState(false);
+  const [isConversationsLoading, setIsConversationsLoading] = useState(true); // Start as loading
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
 
@@ -50,7 +48,28 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (isAuthenticated && !authIsLoading) {
-      loadConversations();
+      // Check for cached conversation from preloading or previous visit
+      import('@/utils/conversation-preloader').then(mod => {
+        const cached = mod.getRecentConversationFromCache();
+        if (cached) {
+          const { conversation, history } = cached;
+          setConversations([conversation]);
+          setSelectedConversationId(conversation.id);
+
+          const formattedMessages = history.messages.map((msg: any, index: number) => ({
+            id: msg.id || (index + 1),
+            text: msg.content,
+            sender: msg.role === 'assistant' ? 'bot' : 'user',
+          }));
+          setMessages(formattedMessages);
+        }
+
+        // Load fresh data in background
+        loadConversationsAndLatest();
+      }).catch(() => {
+        // If there's an error importing, still load fresh data
+        loadConversationsAndLatest();
+      });
     }
   }, [isAuthenticated, authIsLoading]);
 
@@ -58,19 +77,87 @@ export default function ChatPage() {
     scrollToBottom();
   }, [messages]);
 
-  useEffect(() => {
-    if (selectedConversationId) {
-      loadConversationHistory(selectedConversationId);
-    } else {
-      // Show welcome message when no conversation is selected
+  // Removed the useEffect that loads conversation history based on selectedConversationId
+  // It's now handled in loadConversationsAndLatest
+
+  const loadConversationsAndLatest = async () => {
+    setIsConversationsLoading(true);
+    try {
+      // First check if we have a cached conversation
+      const cachedConversation = await import('@/utils/conversation-preloader').then(mod => mod.getRecentConversationFromCache());
+
+      if (cachedConversation) {
+        // Use cached data if available
+        const { conversation, history } = cachedConversation;
+        setConversations([conversation]); // Set as if this is the only conversation for now
+        setSelectedConversationId(conversation.id);
+
+        // Transform backend messages to frontend format
+        const formattedMessages = history.messages.map((msg: any, index: number) => ({
+          id: msg.id || (index + 1),
+          text: msg.content,
+          sender: msg.role === 'assistant' ? 'bot' : 'user',
+        }));
+        setMessages(formattedMessages);
+      } else {
+        // If no cache, fetch from API as before
+        const response = await fetch('/api/v1/chat/conversations', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setConversations(data);
+
+          if (data.length > 0) {
+            // Select and load the most recent conversation automatically
+            const mostRecentConversation = data[0]; // Conversations are ordered by updated_at desc
+            setSelectedConversationId(mostRecentConversation.id);
+
+            // Load the history for the most recent conversation
+            const historyResponse = await fetch(`/api/v1/chat/conversations/${mostRecentConversation.id}`, {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+              }
+            });
+
+            if (historyResponse.ok) {
+              const historyData = await historyResponse.json();
+              // Transform backend messages to frontend format
+              const formattedMessages = historyData.messages.map((msg: any, index: number) => ({
+                id: msg.id || (index + 1),
+                text: msg.content,
+                sender: msg.role === 'assistant' ? 'bot' : 'user',
+              }));
+              setMessages(formattedMessages);
+            } else {
+              // If conversation history fails to load, start with empty messages
+              setMessages([]);
+            }
+          } else {
+            // If no conversations exist, show welcome message
+            setMessages([
+              { id: 1, text: "Hello! I'm your AI assistant. How can I help you with your tasks today?", sender: "bot" },
+            ]);
+            setSelectedConversationId(null);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error loading conversations:', error);
+      // In case of error, show welcome message
       setMessages([
         { id: 1, text: "Hello! I'm your AI assistant. How can I help you with your tasks today?", sender: "bot" },
       ]);
+      setSelectedConversationId(null);
+    } finally {
+      setIsConversationsLoading(false);
     }
-  }, [selectedConversationId]);
+  };
 
   const loadConversations = async () => {
-    setIsConversationsLoading(true);
+    // Existing function to refresh conversation list without changing current view
     try {
       const response = await fetch('/api/v1/chat/conversations', {
         headers: {
@@ -80,17 +167,9 @@ export default function ChatPage() {
       if (response.ok) {
         const data = await response.json();
         setConversations(data);
-
-        // Auto-select the most recent conversation if one exists and no conversation is currently selected
-        if (data.length > 0 && !selectedConversationId) {
-          // Conversations are ordered by updated_at desc, so first one is most recent
-          setSelectedConversationId(data[0].id);
-        }
       }
     } catch (error) {
       console.error('Error loading conversations:', error);
-    } finally {
-      setIsConversationsLoading(false);
     }
   };
 
@@ -127,6 +206,8 @@ export default function ChatPage() {
     setMessages([
       { id: 1, text: "Hello! I'm your AI assistant. How can I help you with your tasks today?", sender: "bot" },
     ]);
+    // Reload conversations to update the list
+    loadConversations();
   };
 
   const scrollToBottom = () => {
@@ -204,6 +285,28 @@ export default function ChatPage() {
     }
   };
 
+  const decodeHTMLEntities = (text: string): string => {
+    return text
+      .replace(/&#x27;/g, "'")      // Single quote
+      .replace(/&quot;/g, '"')       // Double quote
+      .replace(/&lt;/g, '<')         // Less than
+      .replace(/&gt;/g, '>')         // Greater than
+      .replace(/&amp;/g, '&')        // Ampersand
+      .replace(/&#(\d+);/g, (_, numStr) => String.fromCharCode(parseInt(numStr, 10))) // Numeric entities
+      .replace(/&([a-z]+);/gi, (_, entity) => {
+        // Basic named entities map
+        const entities: {[key: string]: string} = {
+          'amp': '&',
+          'lt': '<',
+          'gt': '>',
+          'quot': '"',
+          'apos': "'",
+          'nbsp': ' '
+        };
+        return entities[entity.toLowerCase()] || `&${entity};`;
+      });
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -268,7 +371,18 @@ export default function ChatPage() {
                         },
                       })
                       .then(() => {
-                        setSelectedConversationId(null);
+                        // Remove the deleted conversation from the local list
+                        setConversations(prev => prev.filter(conv => conv.id !== selectedConversationId));
+
+                        // If this was the selected conversation, clear selection and show welcome message
+                        if (selectedConversationId) {
+                          setSelectedConversationId(null);
+                          setMessages([
+                            { id: 1, text: "Hello! I'm your AI assistant. How can I help you with your tasks today?", sender: "bot" },
+                          ]);
+                        }
+
+                        // Reload conversations list
                         loadConversations();
                       })
                       .catch(error => console.error('Error deleting conversation:', error));
@@ -324,7 +438,7 @@ export default function ChatPage() {
                         <Bot className="h-5 w-5 text-cyan-400" />
                       </div>
                     )}
-                    <p className="text-white">{message.text}</p>
+                    <p className="text-white whitespace-pre-wrap">{decodeHTMLEntities(message.text)}</p>
                     {message.sender === "user" && (
                       <div className="flex-shrink-0 pt-0.5">
                         <User className="h-5 w-5 text-white" />

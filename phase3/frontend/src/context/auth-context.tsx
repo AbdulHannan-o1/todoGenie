@@ -11,6 +11,7 @@ import React, {
 import { User } from '@/types/user';
 import { authClient } from '@/lib/auth-client';
 import apiClient from '@/lib/api-client';
+import { preloadRecentConversation } from '@/utils/conversation-preloader';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -75,6 +76,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(userData);
       setIsAuthenticated(true);
 
+      // Preload the most recent conversation in the background
+      setTimeout(() => {
+        preloadRecentConversation(access_token);
+      }, 100); // Small delay to ensure state is updated
+
       return { success: true };
     } catch (error: any) {
       console.error("Login error:", error);
@@ -131,6 +137,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setToken(access_token);
       setUser(userData);
       setIsAuthenticated(true);
+
+      // Preload the most recent conversation in the background
+      setTimeout(() => {
+        preloadRecentConversation(access_token);
+      }, 100); // Small delay to ensure state is updated
 
       return { success: true };
     } catch (error: any) {
