@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from sqlmodel import Session, select
-from phase2.backend.src.models import Task
-from phase2.backend.src.utils.logger import get_logger
+from ..models import Task
+from ..utils.logger import get_logger
 from typing import Callable, Generator
 
 logger = get_logger(__name__)

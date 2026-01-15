@@ -5,12 +5,12 @@ from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlmodel import Session
-from phase2.backend.src.db.session import get_session
-from phase2.backend.src.models import User
-from phase2.backend.src.services.user_service import get_user_by_email, get_user_by_username
-from phase2.backend.src.utils.hash import get_password_hash, verify_password
+from .db.session import get_session
+from .models import User
+from .services.user_service import get_user_by_email, get_user_by_username
+from .utils.hash import get_password_hash, verify_password
 
-from phase2.backend.src.config import settings
+from .config import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")

@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from typing import Optional
 from uuid import UUID
 
-from phase2.backend.config import SECRET_KEY, ALGORITHM
+from src.config import SECRET_KEY, ALGORITHM
 
 class TokenData(BaseModel):
     email: Optional[str] = None
