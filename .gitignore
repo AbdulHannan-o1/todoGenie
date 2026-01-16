@@ -96,3 +96,17 @@ coverage/
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Large binary files
+kubectl
+minikube*
+*.tgz
+*.tar.gz
+*.zip
+*.exe
+*.deb
+*.rpm
+*.pkg
+*.msi
+*.dmg
+*.iso

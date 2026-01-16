@@ -1,0 +1,15 @@
+TodoGenie application has been deployed successfully!
+
+Frontend URL: http://{{ include "todogenie.fullname" . }}-frontend.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.frontend.service.port }}
+Backend URL: http://{{ include "todogenie.fullname" . }}-backend.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.backend.service.port }}
+
+To access the frontend externally, you may need to set up port forwarding:
+kubectl port-forward --namespace {{ .Release.Namespace }} svc/{{ include "todogenie.fullname" . }}-frontend {{ .Values.frontend.service.port }}:{{ .Values.frontend.service.port }}
+
+To access the backend externally, you may need to set up port forwarding:
+kubectl port-forward --namespace {{ .Release.Namespace }} svc/{{ include "todogenie.fullname" . }}-backend {{ .Values.backend.service.port }}:{{ .Values.backend.service.port }}
+
+Check the status of the deployments:
+kubectl get pods --namespace {{ .Release.Namespace }}
+
+For more information on using the application, visit the TodoGenie documentation.
