@@ -53,6 +53,15 @@ Phase 4 successfully implements the deployment of the TodoGenie application to a
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+### Key Features of the Architecture:
+
+- **Service Communication**: Next.js rewrites proxy frontend API calls to backend service
+- **Separation of Concerns**: Frontend and backend are deployed as separate services
+- **Persistent Storage**: PostgreSQL database with persistent volume claims
+- **Configuration Management**: Using Kubernetes ConfigMaps and Secrets
+- **Security**: Network policies and minimal RBAC permissions
+- **Observability**: Ready for integration with monitoring solutions
+
 ## Files Created
 
 ### Docker Configuration

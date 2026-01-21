@@ -6,7 +6,7 @@ const ContentSecurityPolicy = `
   style-src 'self' 'unsafe-inline';
   img-src 'self' blob: data:;
   media-src 'none';
-  connect-src 'self' http://localhost:8000;
+  connect-src 'self' http://localhost:8000 http://todogenie-backend:8000;
   font-src 'self';
 `;
 
@@ -52,39 +52,39 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/api/:user_id/tasks/:path*",
-        destination: `http://localhost:8000/api/:user_id/tasks/:path*`,
+        destination: `http://todogenie-release-backend:8000/tasks/api/:user_id/tasks/:path*`,
       },
       {
         source: "/api/v1/chat/:path*",
-        destination: `http://localhost:8000/api/v1/chat/:path*`,
+        destination: `http://todogenie-release-backend:8000/api/v1/chat/:path*`,
       },
       {
         source: "/api/v1/voice/:path*",
-        destination: `http://localhost:8000/api/v1/voice/:path*`,
+        destination: `http://todogenie-release-backend:8000/api/v1/voice/:path*`,
       },
       {
         source: "/api/auth/:path*",
-        destination: `http://localhost:8000/api/auth/:path*`,
+        destination: `http://todogenie-release-backend:8000/auth/api/auth/:path*`,
       },
       {
         source: "/auth/:path*",
-        destination: `http://localhost:8000/auth/:path*`,
+        destination: `http://todogenie-release-backend:8000/auth/api/auth/:path*`,
       },
       {
         source: "/api/tasks/:path*",
-        destination: `http://localhost:8000/api/tasks/:path*`,
+        destination: `http://todogenie-release-backend:8000/tasks/api/tasks/:path*`,
       },
       {
         source: "/:user_id/tasks/:path*",
-        destination: `http://localhost:8000/api/:user_id/tasks/:path*`,
+        destination: `http://todogenie-release-backend:8000/tasks/api/:user_id/tasks/:path*`,
       },
       {
         source: "/api/users/:path*",
-        destination: `http://localhost:8000/api/users/:path*`,
+        destination: `http://todogenie-release-backend:8000/users/api/users/:path*`,
       },
       {
         source: "/users/:path*",
-        destination: `http://localhost:8000/api/users/:path*`,
+        destination: `http://todogenie-release-backend:8000/users/api/users/:path*`,
       },
     ];
   },

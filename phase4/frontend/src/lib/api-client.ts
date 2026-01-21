@@ -1,6 +1,10 @@
 import axios from "axios";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || "";
+// Use relative paths for browser requests so they go through Next.js rewrites
+// Next.js rewrites in next.config.ts will proxy these to the backend service
+const API_BASE_URL = typeof window === 'undefined'
+  ? (process.env.NEXT_PUBLIC_BACKEND_API_URL || "")  // Server-side
+  : "";  // Client-side: use relative paths to trigger Next.js rewrites
 
 export const getBaseURL = () => API_BASE_URL;
 

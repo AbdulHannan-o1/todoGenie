@@ -23,6 +23,11 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# Set environment variables available during build
+ENV NEXT_PUBLIC_BACKEND_API_URL=""
+ENV NEXT_PUBLIC_OPENAI_API_KEY=""
+ENV NEXT_PUBLIC_OPENAI_DOMAIN_KEY=""
+
 # Next.js collects completely anonymous telemetry data about general usage.
 # Learn more here: https://nextjs.org/telemetry
 # Uncomment the following line in case you want to disable telemetry during the build.

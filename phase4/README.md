@@ -73,6 +73,25 @@ After deployment, you can access the services in the following ways:
 
 ## Architecture
 
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    KUBERNETES CLUSTER (MINIKUBE)                │
+│                                                                 │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
+│  │   FRONTEND      │  │    BACKEND      │  │   DATABASE      │ │
+│  │   (Next.js)     │  │   (FastAPI)     │  │ (PostgreSQL)    │ │
+│  │   Port: 3000    │  │   Port: 8000    │  │   Port: 5432    │ │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘ │
+│              │                 │                    │          │
+│              └─────────────────┼────────────────────┘          │
+│                                │                               │
+│                    ┌─────────────────────────┐                 │
+│                    │     MCP SERVER          │                 │
+│                    │   (Part of Backend)     │                 │
+│                    └─────────────────────────┘                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
 The deployment follows these architectural principles:
 
 - **Separation of Concerns**: Frontend and backend are deployed as separate services
@@ -80,6 +99,7 @@ The deployment follows these architectural principles:
 - **Configuration Management**: Using Kubernetes ConfigMaps and Secrets
 - **Security**: Network policies and minimal RBAC permissions
 - **Observability**: Ready for integration with monitoring solutions
+- **Service Communication**: Next.js rewrites proxy frontend API calls to backend service
 
 ## Helm Chart Structure
 
