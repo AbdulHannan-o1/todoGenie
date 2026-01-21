@@ -12,7 +12,7 @@ from src.services.chatbot import chatbot_service
 from src.services.conversation_service import conversation_service
 from .security_validations import validate_input_text, validate_conversation_id, validate_message_type, check_rate_limit
 
-router = APIRouter(prefix="/api/v1/chat", tags=["chat"])
+router = APIRouter(tags=["chat"])
 
 logger = logging.getLogger(__name__)
 

@@ -32,8 +32,22 @@ COPY --from=deps /usr/local/bin /usr/local/bin
 # Copy application source code
 COPY . .
 
+# Create non-root user with UID 1001 to match security context
+RUN groupadd -g 1001 appgroup && \
+    adduser --uid 1001 --gid 1001 --disabled-password --gecos '' appuser
+
+# Change ownership of files to the app user
+RUN chown -R 1001:1001 /app
+
+# Ensure the startup scripts have proper permissions
+RUN chmod +x /app/start_server.py && chmod +x /app/start_backend.py
+
+# Switch to the non-root user
+USER 1001
+
 # Expose port 8000 for the backend
 EXPOSE 8000
 
-# Run the application
-CMD ["python", "-m", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Set working directory to /app and run the application using the proper startup script
+WORKDIR /app
+CMD ["python", "/app/start_backend.py"]

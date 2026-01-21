@@ -1,7 +1,7 @@
 SQLModel
 fastapi
 alembic
-psycopg[binary]
+psycopg2-binary
 apscheduler
 python-dotenv
 python-jose[cryptography]
@@ -11,3 +11,5 @@ openai
 aiomcp
 uvicorn[standard]>=0.20.0
 email-validator
+python-multipart
+pydantic-settings>=2.0.0

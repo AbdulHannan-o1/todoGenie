@@ -16,8 +16,13 @@ def create_db_engine(database_url: str | None = None) -> Engine:
         # SQLite-specific settings
         connect_args["check_same_thread"] = False
     elif database_url.startswith("postgresql://") or database_url.startswith("postgresql+psycopg://"):
-        # PostgreSQL-specific settings for Neon
-        connect_args["sslmode"] = "require"
+        # PostgreSQL-specific settings - adjust based on environment
+        # For local Kubernetes PostgreSQL, use 'prefer' or 'disable'
+        # For cloud databases like Neon, you might want 'require'
+        if "localhost" in database_url or "todogenie-postgresql" in database_url:
+            connect_args["sslmode"] = "prefer"  # Less strict for local development
+        else:
+            connect_args["sslmode"] = "prefer"  # Use prefer as default
 
     _engine = create_engine(database_url, echo=True, connect_args=connect_args)
     return _engine
