@@ -297,14 +297,24 @@ export default function TasksPage() {
                           </td>
                           <td className="py-3 px-4">
                             <button
-                              onClick={() => router.push(`/tasks/${task.id}`)}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                router.push(`/tasks/${task.id}`);
+                              }}
                               className="text-slate-400 hover:text-cyan-400 mr-3"
+                              type="button"
                             >
                               Edit
                             </button>
                             <button
-                              onClick={() => handleDeleteTask(task.id)}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleDeleteTask(task.id);
+                              }}
                               className="text-slate-400 hover:text-red-400"
+                              type="button"
                             >
                               Delete
                             </button>

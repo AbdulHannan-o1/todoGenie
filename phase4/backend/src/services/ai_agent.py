@@ -96,27 +96,53 @@ class AIAgentService:
         task_keywords = ['task', 'tasks', 'todo', 'to-do', 'to do', 'things to do', 'items', 'list', 'pending', 'active', 'current', 'my']
         query_keywords = ['what', 'show', 'list', 'display', 'view', 'see', 'get', 'tell me', 'do i have', 'do i', 'are there']
         status_keywords = ['pending', 'active', 'current', 'incomplete', 'open', 'remaining', 'left', 'not done', 'outstanding']
+        completed_keywords = ['completed', 'done', 'finished', 'completed tasks', 'done tasks', 'finished tasks', 'all done', 'all completed']
 
         # Count relevant keywords to determine if this is a task-related query
         task_word_count = sum(1 for word in task_keywords if word in message_lower)
         query_word_count = sum(1 for word in query_keywords if word in message_lower)
         status_word_count = sum(1 for word in status_keywords if word in message_lower)
+        completed_word_count = sum(1 for word in completed_keywords if word in message_lower)
 
         # Determine if this is likely a task-related request based on keyword presence
         is_task_related = (
             (task_word_count > 0 and query_word_count > 0) or  # e.g., "show tasks", "list my tasks"
             (task_word_count > 0 and status_word_count > 0) or  # e.g., "show pending tasks"
+            (task_word_count > 0 and completed_word_count > 0) or  # e.g., "show completed tasks"
             'what are my tasks' in message_lower or
             'what are my pending' in message_lower or
+            'what are my completed' in message_lower or
             'show me my tasks' in message_lower or
             'show me my pending' in message_lower or
+            'show me my completed' in message_lower or
             'list all my tasks' in message_lower or
-            'list my tasks' in message_lower
+            'list my tasks' in message_lower or
+            'list completed tasks' in message_lower
+        )
+
+        # Check if specifically requesting completed tasks
+        is_completed_specific = (
+            completed_word_count > 0 or
+            'completed tasks' in message_lower or
+            'done tasks' in message_lower or
+            'finished tasks' in message_lower or
+            'show completed' in message_lower or
+            'list completed' in message_lower
         )
 
         if is_task_related:
             from src.services.mcp_server.todo_tools import list_tasks_tool
-            tasks = list_tasks_tool(user_id=user_id)
+            all_tasks = list_tasks_tool(user_id=user_id)
+
+            # Filter tasks based on whether user requested completed or pending
+            if is_completed_specific:
+                # Show only completed tasks
+                tasks = [task for task in all_tasks if isinstance(task, dict) and task.get("status", "").lower() in ["completed", "done", "finished"]]
+                task_type = "completed"
+            else:
+                # Show only pending/active tasks (not completed)
+                tasks = [task for task in all_tasks if isinstance(task, dict) and task.get("status", "").lower() not in ["completed", "done", "finished"]]
+                task_type = "pending"
 
             if isinstance(tasks, list) and len(tasks) > 0:
                 high_priority = []
@@ -145,7 +171,7 @@ class AIAgentService:
                         else:
                             no_priority.append(task_info)
 
-                lines = ["📋 **Your Pending Tasks**\n"]
+                lines = [f"📋 **Your {task_type.capitalize()} Tasks**\n"]
 
                 if high_priority:
                     lines.append("🔴 **HIGH PRIORITY**")
@@ -160,10 +186,10 @@ class AIAgentService:
                     lines.append("\n⚪ **NO PRIORITY SET**")
                     lines.extend(no_priority)
 
-                lines.append(f"\n_{len(tasks)} task(s) total_")
+                lines.append(f"\n_{len(tasks)} {task_type} task(s) total_")
                 final_response = "\n".join(lines)
             else:
-                final_response = "✨ You have no pending tasks. Great job!"
+                final_response = f"✨ You have no {task_type} tasks. Great job!" if task_type == "completed" else "✨ You have no pending tasks. Great job!"
 
             return {
                 "response": final_response,
@@ -275,7 +301,7 @@ class AIAgentService:
 
         # Check if user wants to update a task
         # Enhanced semantic understanding for update task requests
-        update_keywords = ['update', 'edit', 'change', 'modify', 'adjust', 'revise', 'alter', 'set', 'add', 'include', 'description', 'details', 'info', 'information']
+        update_keywords = ['update', 'edit', 'change', 'modify', 'adjust', 'revise', 'alter', 'set', 'include', 'description', 'details', 'info', 'information']
         task_indicators = ['task', 'tasks', 'item', 'items', 'thing', 'things', 'it']
 
         # Count relevant keywords to determine if this is an update task request
@@ -492,7 +518,7 @@ class AIAgentService:
 
                     "TASK MANAGEMENT CAPABILITIES:\n"
                     "You can create, list, update, delete, and complete tasks using these tools:\n"
-                    "- create_task: Create new tasks\n"
+                    "- create_task: Create new tasks (also triggered by 'add', 'make', 'create')\n"
                     "- list_tasks: Show current tasks\n"
                     "- update_task: Modify existing tasks\n"
                     "- delete_task: Remove tasks\n"
