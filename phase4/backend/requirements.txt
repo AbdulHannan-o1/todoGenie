@@ -1,0 +1,15 @@
+SQLModel
+fastapi
+alembic
+psycopg2-binary
+apscheduler
+python-dotenv
+python-jose[cryptography]
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+openai
+aiomcp
+uvicorn[standard]>=0.20.0
+email-validator
+python-multipart
+pydantic-settings>=2.0.0
