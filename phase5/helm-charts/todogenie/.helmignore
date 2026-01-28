@@ -1,0 +1,52 @@
+# Dependencies
+node_modules
+vendor
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.git
+.hg
+.svn
+.DS_Store
+.helmignore
+
+# Backend virtual environment
+../backend/.venv/
+../backend/__pycache__/
+../backend/*.pyc
+../backend/.pytest_cache/
+
+# Frontend
+../frontend/node_modules/
+../frontend/.next/
+../frontend/out/
+../frontend/.nyc_output
+../frontend/nyc-report
+../frontend/cov/coverage
+../frontend/.cache/
+../frontend/.npm/
+../frontend/.yarn/
+../frontend/.nuxt/
+../frontend/.vercel/
+../frontend/.swc/
+
+# OS
+.DS_Store
+Thumbs.db
