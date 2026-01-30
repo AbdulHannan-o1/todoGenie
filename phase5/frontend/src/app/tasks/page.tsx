@@ -8,6 +8,7 @@ import { taskApi } from "@/lib/api/tasks";
 import { Task } from "@/types/task";
 import { Menu, Plus, Search, Filter, Calendar, CheckCircle, Clock, ListTodo, AlertCircle, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
+import TaskDetailsModal from "@/components/task/TaskDetailsModal";
 
 export default function TasksPage() {
   const { isAuthenticated, user, isLoading } = useAuth();
@@ -19,6 +20,8 @@ export default function TasksPage() {
   const [priorityFilter, setPriorityFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
 
   useEffect(() => {
     if (isLoading) {
@@ -90,6 +93,18 @@ export default function TasksPage() {
       }
     } catch (error) {
       console.error("Error deleting task:", error);
+    }
+  };
+
+  const openTaskDetails = (task: Task) => {
+    setSelectedTask(task);
+    setIsTaskModalOpen(true);
+  };
+
+  const handleEditTask = () => {
+    if (selectedTask) {
+      router.push(`/tasks/${selectedTask.id}`);
+      setIsTaskModalOpen(false);
     }
   };
 
@@ -218,9 +233,11 @@ export default function TasksPage() {
                     <tr>
                       <th className="text-left py-3 px-4 font-medium text-slate-300">Task</th>
                       <th className="text-left py-3 px-4 font-medium text-slate-300">Status</th>
+                      <th className="text-left py-3 px-4 font-medium text-slate-300">Priority</th>
                       <th className="text-left py-3 px-4 font-medium text-slate-300">Due Date</th>
+                      <th className="text-left py-3 px-4 font-medium text-slate-300">Reminder</th>
+                      <th className="text-left py-3 px-4 font-medium text-slate-300">Recurrence</th>
                       <th className="text-left py-3 px-4 font-medium text-slate-300">Created</th>
-                      <th className="text-left py-3 px-4 font-medium text-slate-300">Updated</th>
                       <th className="text-left py-3 px-4 font-medium text-slate-300">Actions</th>
                     </tr>
                   </thead>
@@ -243,16 +260,17 @@ export default function TasksPage() {
                                 className="h-4 w-4 rounded border-slate-600 bg-slate-700 text-cyan-600 focus:ring-cyan-500"
                               />
                               <div className="ml-3">
-                                <span className={`${task.status === 'completed' ? "line-through text-slate-500" : "text-white"}`}>
+                                <span
+                                  className={`${task.status === 'completed' ? "line-through text-slate-500 cursor-pointer hover:text-cyan-400" : "text-white cursor-pointer hover:text-cyan-400"}`}
+                                  onClick={() => openTaskDetails(task)}
+                                >
                                   {task.title}
                                 </span>
-                                <span className={`ml-2 text-xs px-2 py-1 rounded-full ${
-                                  task.priority === 'high' ? 'bg-red-500/20 text-red-400' :
-                                  task.priority === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
-                                  'bg-green-500/20 text-green-400'
-                                }`}>
-                                  {task.priority}
-                                </span>
+                                {task.parent_task_id && (
+                                  <span className="ml-2 text-xs px-2 py-1 rounded-full bg-blue-500/20 text-blue-400">
+                                    Sub-task
+                                  </span>
+                                )}
                               </div>
                             </div>
                             {task.description && (
@@ -268,6 +286,16 @@ export default function TasksPage() {
                               {task.status === 'completed' ? "Completed" : "Pending"}
                             </span>
                           </td>
+                          <td className="py-3 px-4">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              task.priority === 'high' ? 'bg-red-500/20 text-red-400' :
+                              task.priority === 'urgent' ? 'bg-red-600/30 text-red-300' :
+                              task.priority === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                              'bg-green-500/20 text-green-400'
+                            }`}>
+                              {task.priority}
+                            </span>
+                          </td>
                           <td className="py-3 px-4 text-slate-300">
                             {task.due_date ? (() => {
                               try {
@@ -278,18 +306,25 @@ export default function TasksPage() {
                             })() : 'N/A'}
                           </td>
                           <td className="py-3 px-4 text-slate-300">
-                            {task.created_at ? (() => {
+                            {task.reminder_time ? (() => {
                               try {
-                                return new Date(task.created_at).toLocaleDateString();
+                                return new Date(task.reminder_time).toLocaleDateString();
                               } catch (e) {
                                 return 'N/A';
                               }
                             })() : 'N/A'}
                           </td>
                           <td className="py-3 px-4 text-slate-300">
-                            {task.updated_at ? (() => {
+                            {task.recurrence_pattern ? (() => {
+                              const { frequency, interval } = task.recurrence_pattern;
+                              if (!frequency || (frequency as string) === 'none') return 'None';
+                              return `${interval > 1 ? interval : ''} ${frequency}${interval > 1 ? 's' : ''}`;
+                            })() : 'None'}
+                          </td>
+                          <td className="py-3 px-4 text-slate-300">
+                            {task.created_at ? (() => {
                               try {
-                                return new Date(task.updated_at).toLocaleDateString();
+                                return new Date(task.created_at).toLocaleDateString();
                               } catch (e) {
                                 return 'N/A';
                               }
@@ -323,7 +358,7 @@ export default function TasksPage() {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={6} className="py-8 px-4 text-center text-slate-500">
+                        <td colSpan={8} className="py-8 px-4 text-center text-slate-500">
                           No tasks found. Create your first task to get started!
                         </td>
                       </tr>
@@ -335,6 +370,13 @@ export default function TasksPage() {
           </div>
         </section>
       </main>
+
+      <TaskDetailsModal
+        task={selectedTask}
+        isOpen={isTaskModalOpen}
+        onClose={() => setIsTaskModalOpen(false)}
+        onEdit={handleEditTask}
+      />
     </div>
   );
 }

@@ -439,9 +439,27 @@ class AIAgentService:
                             "properties": {
                                 "title": {"type": "string", "description": "Task title"},
                                 "description": {"type": "string", "description": "Task description"},
-                                "tags": {"type": "string", "description": "Tags (comma-separated)"},
-                                "priority": {"type": "string", "description": "Priority: low, medium, high"},
+                                "priority": {"type": "string", "description": "Priority: low, medium, high, or urgent"},
                                 "due_date": {"type": "string", "description": "Due date (ISO format)"},
+                                "reminder_time": {"type": "string", "description": "Reminder time (ISO format)"},
+                                "tags": {"type": "string", "description": "Tags (comma-separated)"},
+                                "recurrence_pattern": {
+                                    "type": "object",
+                                    "description": "Recurrence pattern for recurring tasks",
+                                    "properties": {
+                                        "frequency": {"type": "string", "enum": ["daily", "weekly", "monthly", "yearly", "custom"], "description": "Recurrence frequency"},
+                                        "interval": {"type": "integer", "description": "Interval multiplier"},
+                                        "end_condition": {
+                                            "type": "object",
+                                            "properties": {
+                                                "type": {"type": "string", "enum": ["never", "on_date", "after_occurrences"], "description": "When to stop recurrence"},
+                                                "value": {"type": ["string", "integer"], "description": "Date string or occurrence count"}
+                                            }
+                                        },
+                                        "exceptions": {"type": "array", "items": {"type": "string"}, "description": "Array of dates to skip in recurrence"}
+                                    }
+                                },
+                                "parent_task_id": {"type": "string", "description": "ID of parent task for hierarchical tasks"}
                             },
                             "required": ["title"],
                         },
@@ -470,6 +488,27 @@ class AIAgentService:
                                 "title": {"type": "string", "description": "The new title"},
                                 "description": {"type": "string", "description": "The new description"},
                                 "status": {"type": "string", "description": "The new status"},
+                                "priority": {"type": "string", "description": "Priority: low, medium, high, or urgent"},
+                                "due_date": {"type": "string", "description": "Due date (ISO format)"},
+                                "reminder_time": {"type": "string", "description": "Reminder time (ISO format)"},
+                                "tags": {"type": "string", "description": "Tags (comma-separated)"},
+                                "recurrence_pattern": {
+                                    "type": "object",
+                                    "description": "Recurrence pattern for recurring tasks",
+                                    "properties": {
+                                        "frequency": {"type": "string", "enum": ["daily", "weekly", "monthly", "yearly", "custom"], "description": "Recurrence frequency"},
+                                        "interval": {"type": "integer", "description": "Interval multiplier"},
+                                        "end_condition": {
+                                            "type": "object",
+                                            "properties": {
+                                                "type": {"type": "string", "enum": ["never", "on_date", "after_occurrences"], "description": "When to stop recurrence"},
+                                                "value": {"type": ["string", "integer"], "description": "Date string or occurrence count"}
+                                            }
+                                        },
+                                        "exceptions": {"type": "array", "items": {"type": "string"}, "description": "Array of dates to skip in recurrence"}
+                                    }
+                                },
+                                "parent_task_id": {"type": "string", "description": "ID of parent task for hierarchical tasks"}
                             },
                         },
                     },
@@ -509,7 +548,7 @@ class AIAgentService:
             system_message = {
                 "role": "system",
                 "content": (
-                    "You are a friendly AI companion and task manager. Your personality is empathetic, supportive, and helpful like a close friend.\n\n"
+                    "You are a friendly AI companion and task manager. Your personality is empathetic, supportive, and helpful like a close friend. You can help with anything - just ask!\n\n"
 
                     "CORE IDENTITY:\n"
                     "- Be warm, conversational, and genuinely caring\n"
@@ -517,12 +556,19 @@ class AIAgentService:
                     "- Seamlessly blend friendship with task management\n\n"
 
                     "TASK MANAGEMENT CAPABILITIES:\n"
-                    "You can create, list, update, delete, and complete tasks using these tools:\n"
+                    "You can create, list, update, delete, complete tasks, and manage advanced features using these tools:\n"
                     "- create_task: Create new tasks (also triggered by 'add', 'make', 'create')\n"
                     "- list_tasks: Show current tasks\n"
                     "- update_task: Modify existing tasks\n"
                     "- delete_task: Remove tasks\n"
                     "- complete_task: Mark tasks as done\n\n"
+
+                    "ADVANCED FEATURES:\n"
+                    "You can also manage these advanced features:\n"
+                    "- Recurring tasks: Set up tasks that repeat daily, weekly, monthly, or yearly\n"
+                    "- Due date reminders: Set specific times to be reminded about tasks\n"
+                    "- Tags and categories: Organize tasks with customizable tags\n"
+                    "- Hierarchical tasks: Create parent tasks with sub-tasks for better organization\n\n"
 
                     "CONVERSATIONAL INTELLIGENCE:\n"
                     "- Engage in friendly chat about life, problems, goals\n"
@@ -532,19 +578,26 @@ class AIAgentService:
                     "- Extract tasks from natural conversation:\n"
                     "  * Identify due dates ('tomorrow', 'next week', 'by Friday')\n"
                     "  * Recognize priorities ('urgent', 'important', 'when possible')\n"
-                    "  * Understand task details embedded in stories\n\n"
+                    "  * Understand task details embedded in stories\n"
+                    "  * Detect when user wants recurring tasks ('every day', 'weekly', 'monthly')\n"
+                    "  * Recognize when user wants to set reminders ('remind me', 'notification')\n"
+                    "  * Identify when user wants to categorize tasks ('tag with', 'category', 'labels')\n"
+                    "  * Understand hierarchical relationships ('sub-task of', 'child of', 'parent task')\n\n"
 
                     "TASK CREATION GUIDELINES:\n"
                     "- title: Main task (extract from conversation)\n"
                     "- description: Details (derive from context)\n"
-                    "- priority: low, medium, or high (infer from urgency words)\n"
+                    "- priority: low, medium, high, or urgent (infer from urgency words)\n"
                     "- due_date: ISO format (convert from natural language)\n"
-                    "- tags: Categories (derive from context)\n\n"
+                    "- reminder_time: Specific time to be notified (derive from reminder requests)\n"
+                    "- tags: Comma-separated categories (derive from context)\n"
+                    "- recurrence_pattern: How often the task repeats (daily, weekly, monthly, yearly)\n"
+                    "- parent_task_id: ID of parent task if this is a sub-task\n\n"
 
                     "TASK LISTING FORMAT:\n"
-                    "| # | Name | Due Date | Priority |\n"
-                    "|---|------|----------|----------|\n"
-                    "| 1 | Buy coffee | 2025-01-15 | high |\n\n"
+                    "| # | Name | Due Date | Priority | Tags | Recurrence | Parent |\n"
+                    "|---|------|----------|----------|------|------------|--------|\n"
+                    "| 1 | Buy coffee | 2025-01-15 | high | shopping | daily | - |\n\n"
 
                     "GUARDRAILS:\n"
                     "- Maintain professional yet friendly boundaries\n"
@@ -560,7 +613,7 @@ class AIAgentService:
                     "- Encouraging friend\n"
                     "- Efficient organizer\n\n"
 
-                    "When user shares concerns (like being late), acknowledge their feelings first, then suggest helpful actions like task management to prevent future issues."
+                    "When user shares concerns (like being late), acknowledge their feelings first, then suggest helpful actions like task management to prevent future issues. Remember, you're here to help with whatever the user needs!"
                 )
             }
 

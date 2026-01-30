@@ -1,6 +1,7 @@
 # Import all models from their respective files to avoid duplicate definitions
 from .conversation import Conversation
 from .message import Message
+from .tags import Tag, TaskTag, Event, Notification
 
 # Import User and Task from the models.py file
 from sqlmodel import Field, SQLModel
@@ -24,10 +25,12 @@ class Task(SQLModel, table=True):
     title: str
     description: Optional[str] = None
     status: str = Field(default="pending")  # pending, in progress, completed, archived, cancelled
-    priority: Optional[str] = None  # low, medium, high
-    recurrence: Optional[str] = None  # daily, weekly, monthly, yearly
-    due_date: Optional[datetime] = None
-    tags: str = Field(default="")
+    priority: str = Field(default="medium")  # low, medium, high, urgent
+    recurrence_pattern: Optional[dict] = Field(default=None, sa_column=sa.Column(sa.JSON))  # JSON field for recurrence rules
+    due_date: Optional[datetime] = Field(sa_column=sa.Column(sa.DateTime(timezone=True), nullable=True))
+    reminder_time: Optional[datetime] = Field(sa_column=sa.Column(sa.DateTime(timezone=True), nullable=True))
+    tags: str = Field(default="")  # Will store comma-separated tag IDs or names
+    parent_task_id: Optional[UUID] = Field(default=None, foreign_key="task.id")  # For hierarchical tasks
     user_id: UUID = Field(foreign_key="user.id")
     # AI integration fields
     ai_generated: bool = Field(default=False)  # Whether the task was created via AI
@@ -47,10 +50,23 @@ class UserLogin(BaseModel):
 class TaskCreate(BaseModel):
     title: str
     description: Optional[str] = None
+    status: Optional[str] = "pending"
+    priority: Optional[str] = "medium"
+    recurrence_pattern: Optional[dict] = None
+    due_date: Optional[datetime] = None
+    reminder_time: Optional[datetime] = None
+    tags: Optional[str] = ""
+    parent_task_id: Optional[UUID] = None
 
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
-    completed: Optional[bool] = None
+    status: Optional[str] = None
+    priority: Optional[str] = None
+    recurrence_pattern: Optional[dict] = None
+    due_date: Optional[datetime] = None
+    reminder_time: Optional[datetime] = None
+    tags: Optional[str] = None
+    parent_task_id: Optional[UUID] = None
 
-__all__ = ["User", "Task", "Conversation", "Message", "UserLogin", "TaskCreate", "TaskUpdate"]
+__all__ = ["User", "Task", "Conversation", "Message", "Tag", "TaskTag", "Event", "Notification", "UserLogin", "TaskCreate", "TaskUpdate"]

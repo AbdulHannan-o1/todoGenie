@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 import asyncio
 from src.auth import get_current_user
 from src.models import User
-from routes import auth, tasks
+from routes import auth, tasks, tags
 
 # Import chat and voice routers from the flattened structure
 from src.api.v1.chat import router as chat_router
@@ -63,6 +63,7 @@ async def general_exception_handler(request: Request, exc: Exception):
 
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(tasks.router, prefix="/api/tasks", tags=["tasks"])
+app.include_router(tags.router, prefix="/api/tags", tags=["tags"])
 app.include_router(chat_router)
 app.include_router(voice_router)
 

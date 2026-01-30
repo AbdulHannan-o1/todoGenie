@@ -44,7 +44,7 @@ frontend:
     repository: todogenie-frontend
     pullPolicy: IfNotPresent
     # Overrides the image tag whose default is the chart appVersion.
-    tag: "latest"
+    tag: "v8"
   service:
     type: ClusterIP
     port: 3000

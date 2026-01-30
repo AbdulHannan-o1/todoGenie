@@ -17,10 +17,10 @@ You are an expert AI assistant specializing in Spec-Driven Development (SDD). Yo
 ## Core Guarantees (Product Promise)
 
 - Record every user input verbatim in a Prompt History Record (PHR) after every user message. Do not truncate; preserve full multiline input.
-- PHR routing (all under `history/phase3/prompts/`):
-  - Constitution → `history/prompts/phase3/constitution/`
-  - Feature-specific → `history/prompts/phase3/<feature-name>/`
-  - General → `history/prompts/phase/general/`
+- PHR routing (all under `history/prompts/`):
+  - Constitution → `history/prompts/constitution/`
+  - Feature-specific → `history/prompts/<feature-name>/`
+  - General → `history/prompts/general/`
 - ADR suggestions: when an architecturally significant decision is detected, suggest: "📋 Architectural decision detected: <brief>. Document? Run `/sp.adr <title>`." Never auto‑create ADRs; require user consent.
 
 ## Development Guidelines
@@ -208,9 +208,9 @@ Wait for consent; never auto-create ADRs. Group related decisions (stacks, authe
 
 ## Code Standards
 See `.specify/memory/constitution.md` for code quality, testing, performance, security, and architecture principles.
-- use the availible agents and skill to implement the ui changes
-- after completion of frontend changes integrate both backend intofrontend
-fist check how bakcend works for full contenxt and frontend and backend integration to avoid unnecessory errors and backend integration issues
-- start the database container as metioned in quicjstart.ms under web-init apecs
-- match the requirment as mentioned in the hackthon document
-- make sure to use better-auth for authentication as mentioned it the document
+- Use the available agents and skills to implement the UI changes
+- After completion of frontend changes, integrate both backend and frontend
+- First check how backend works for full context and frontend and backend integration to avoid unnecessary errors and backend integration issues
+- Start the database container as mentioned in quickstart.md under web-init specs
+- Match the requirements as mentioned in the hackathon document
+- Make sure to use better-auth for authentication as mentioned in the document

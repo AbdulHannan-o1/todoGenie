@@ -6,9 +6,12 @@ import { normalizeTask, normalizeTasks } from '@/lib/task-utils';
 export interface TaskCreateData {
   title: string;
   description?: string;
-  priority?: string; // low, medium, high
+  priority?: string; // low, medium, high, urgent
   due_date?: string; // ISO date string
+  reminder_time?: string; // ISO date string for reminder
   tags?: string; // comma-separated tags
+  recurrence_pattern?: RecurrencePattern; // Recurrence pattern for recurring tasks
+  parent_task_id?: string; // UUID as string for hierarchical tasks
   status?: string; // pending, in progress, completed, archived, cancelled
 }
 
@@ -16,10 +19,23 @@ export interface TaskUpdateData {
   title?: string;
   description?: string;
   completed?: boolean;
-  priority?: string; // low, medium, high
+  priority?: string; // low, medium, high, urgent
   due_date?: string; // ISO date string
+  reminder_time?: string; // ISO date string for reminder
   tags?: string; // comma-separated tags
+  recurrence_pattern?: RecurrencePattern; // Recurrence pattern for recurring tasks
+  parent_task_id?: string; // UUID as string for hierarchical tasks
   status?: string; // pending, in progress, completed, archived, cancelled
+}
+
+export interface RecurrencePattern {
+  frequency: 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom'; // Recurrence frequency
+  interval: number; // Interval multiplier (e.g., every 2 weeks)
+  end_condition: {
+    type: 'never' | 'on_date' | 'after_occurrences'; // When to stop recurrence
+    value?: string | number; // Date string or occurrence count
+  };
+  exceptions?: string[]; // Array of dates to skip in recurrence
 }
 
 // API functions for task operations
@@ -125,5 +141,57 @@ export const taskApi = {
 
     const response = await apiClient.patch<Task>(`/api/${userId}/tasks/${taskId}/complete`);
     return normalizeTask(response.data);
+  },
+
+  // Get child tasks for a parent task
+  getChildTasks: async (taskId: string): Promise<Task[]> => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const userId = user.id;
+
+    if (!userId) {
+      throw new Error('User not authenticated or user ID not available');
+    }
+
+    const response = await apiClient.get<Task[]>(`/api/${userId}/tasks/${taskId}/children`);
+    return normalizeTasks(response.data);
+  },
+
+  // Create a child task under a parent task
+  createChildTask: async (taskId: string, taskData: TaskCreateData): Promise<Task> => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const userId = user.id;
+
+    if (!userId) {
+      throw new Error('User not authenticated or user ID not available');
+    }
+
+    const response = await apiClient.post<Task>(`/api/${userId}/tasks/${taskId}/children`, taskData);
+    return normalizeTask(response.data);
+  },
+
+  // Get parent tasks (ancestors) for a task
+  getParentTasks: async (taskId: string): Promise<Task[]> => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const userId = user.id;
+
+    if (!userId) {
+      throw new Error('User not authenticated or user ID not available');
+    }
+
+    const response = await apiClient.get<Task[]>(`/api/${userId}/tasks/${taskId}/ancestors`);
+    return normalizeTasks(response.data);
+  },
+
+  // Get upcoming reminders for a user
+  getUpcomingReminders: async (hoursAhead: number = 24): Promise<any[]> => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const userId = user.id;
+
+    if (!userId) {
+      throw new Error('User not authenticated or user ID not available');
+    }
+
+    const response = await apiClient.get<any[]>(`/api/${userId}/tasks/reminders/upcoming?hours_ahead=${hoursAhead}`);
+    return response.data;
   },
 };

@@ -14,9 +14,12 @@ export const normalizeTask = (task: Partial<Task>): Task => {
     id: task.id || '',
     title: task.title || '',
     description: task.description || '',
-    priority: task.priority || 'low', // Default to 'low' if not provided, as per backend model
+    priority: task.priority || 'medium', // Default to 'medium' if not provided, as per backend model
     due_date: task.due_date,
+    reminder_time: task.reminder_time,
     tags: task.tags,
+    recurrence_pattern: task.recurrence_pattern,
+    parent_task_id: task.parent_task_id,
     status: task.status || 'pending',
     created_at: task.created_at || '',
     updated_at: task.updated_at || '',

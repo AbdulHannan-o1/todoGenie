@@ -5,9 +5,10 @@ import { useAuth } from "@/context/auth-context";
 import { useRouter } from "next/navigation";
 import Sidebar from "../../components/layout/sidebar";
 import { motion } from "framer-motion";
-import { Menu, Plus, Search, Filter, Calendar, TrendingUp, CheckCircle, Clock, ListTodo, AlertCircle, Loader2 } from "lucide-react";
+import { Menu, Plus, Search, Filter, Calendar, TrendingUp, CheckCircle, Clock, ListTodo, AlertCircle, Loader2, FolderTree } from "lucide-react";
 import { taskApi, TaskCreateData } from "@/lib/api/tasks";
 import { Task } from "@/types/task";
+import TaskDetailsModal from "@/components/task/TaskDetailsModal";
 
 export default function DashboardPage() {
   const { isAuthenticated, user, isLoading } = useAuth();
@@ -19,6 +20,8 @@ export default function DashboardPage() {
   const [priorityFilter, setPriorityFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const filterPanelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -107,6 +110,18 @@ export default function DashboardPage() {
       }
     } catch (error) {
       console.error("Error deleting task:", error);
+    }
+  };
+
+  const openTaskDetails = (task: Task) => {
+    setSelectedTask(task);
+    setIsTaskModalOpen(true);
+  };
+
+  const handleEditTask = () => {
+    if (selectedTask) {
+      router.push(`/tasks/${selectedTask.id}`);
+      setIsTaskModalOpen(false);
     }
   };
 
@@ -238,24 +253,24 @@ export default function DashboardPage() {
 
         {/* Stats Section */}
         <section className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             {stats.map((stat, index) => {
               const Icon = stat.icon;
               return (
                 <motion.div
                   key={index}
-                  className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6"
+                  className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-4"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: index * 0.1 }}
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-slate-400 text-sm">{stat.title}</p>
-                      <p className="text-2xl font-bold mt-1">{stat.value}</p>
+                      <p className="text-slate-400 text-xs md:text-sm">{stat.title}</p>
+                      <p className="text-xl font-bold mt-1">{stat.value}</p>
                     </div>
-                    <div className={`p-3 rounded-lg bg-slate-700 ${stat.color}`}>
-                      <Icon className="h-6 w-6" />
+                    <div className={`p-2 rounded-lg bg-slate-700 ${stat.color}`}>
+                      <Icon className="h-5 w-5" />
                     </div>
                   </div>
                 </motion.div>
@@ -288,9 +303,11 @@ export default function DashboardPage() {
                     <tr>
                       <th className="text-left py-3 px-4 font-medium text-slate-300">Task</th>
                       <th className="text-left py-3 px-4 font-medium text-slate-300">Status</th>
+                      <th className="text-left py-3 px-4 font-medium text-slate-300">Priority</th>
                       <th className="text-left py-3 px-4 font-medium text-slate-300">Due Date</th>
+                      <th className="text-left py-3 px-4 font-medium text-slate-300">Reminder</th>
+                      <th className="text-left py-3 px-4 font-medium text-slate-300">Recurrence</th>
                       <th className="text-left py-3 px-4 font-medium text-slate-300">Created</th>
-                      <th className="text-left py-3 px-4 font-medium text-slate-300">Updated</th>
                       <th className="text-left py-3 px-4 font-medium text-slate-300">Actions</th>
                     </tr>
                   </thead>
@@ -313,16 +330,17 @@ export default function DashboardPage() {
                                 className="h-4 w-4 rounded border-slate-600 bg-slate-700 text-cyan-600 focus:ring-cyan-500"
                               />
                               <div className="ml-3">
-                                <span className={`${task.completed ? "line-through text-slate-500" : "text-white"}`}>
+                                <span
+                                  className={`${task.completed ? "line-through text-slate-500 cursor-pointer hover:text-cyan-400" : "text-white cursor-pointer hover:text-cyan-400"}`}
+                                  onClick={() => openTaskDetails(task)}
+                                >
                                   {task.title}
                                 </span>
-                                <span className={`ml-2 text-xs px-2 py-1 rounded-full ${
-                                  task.priority === 'high' ? 'bg-red-500/20 text-red-400' :
-                                  task.priority === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
-                                  'bg-green-500/20 text-green-400'
-                                }`}>
-                                  {task.priority}
-                                </span>
+                                {task.parent_task_id && (
+                                  <span className="ml-2 text-xs px-2 py-1 rounded-full bg-blue-500/20 text-blue-400">
+                                    Sub-task
+                                  </span>
+                                )}
                               </div>
                             </div>
                             {task.description && (
@@ -338,6 +356,16 @@ export default function DashboardPage() {
                               {task.completed ? "Completed" : "Pending"}
                             </span>
                           </td>
+                          <td className="py-3 px-4">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              task.priority === 'high' ? 'bg-red-500/20 text-red-400' :
+                              task.priority === 'urgent' ? 'bg-red-600/30 text-red-300' :
+                              task.priority === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                              'bg-green-500/20 text-green-400'
+                            }`}>
+                              {task.priority}
+                            </span>
+                          </td>
                           <td className="py-3 px-4 text-slate-300">
                             {task.due_date ? (() => {
                               try {
@@ -348,6 +376,22 @@ export default function DashboardPage() {
                             })() : 'N/A'}
                           </td>
                           <td className="py-3 px-4 text-slate-300">
+                            {task.reminder_time ? (() => {
+                              try {
+                                return new Date(task.reminder_time).toLocaleDateString();
+                              } catch (e) {
+                                return 'N/A';
+                              }
+                            })() : 'N/A'}
+                          </td>
+                          <td className="py-3 px-4 text-slate-300">
+                            {task.recurrence_pattern ? (() => {
+                              const { frequency, interval } = task.recurrence_pattern;
+                              if (!frequency || (frequency as string) === 'none') return 'None';
+                              return `${interval > 1 ? interval : ''} ${frequency}${interval > 1 ? 's' : ''}`;
+                            })() : 'None'}
+                          </td>
+                          <td className="py-3 px-4 text-slate-300">
                             {task.created_at ? (() => {
                               try {
                                 return new Date(task.created_at).toLocaleDateString();
@@ -356,19 +400,15 @@ export default function DashboardPage() {
                               }
                             })() : 'N/A'}
                           </td>
-                          <td className="py-3 px-4 text-slate-300">
-                            {task.updated_at ? (() => {
-                              try {
-                                return new Date(task.updated_at).toLocaleDateString();
-                              } catch (e) {
-                                return 'N/A';
-                              }
-                            })() : 'N/A'}
-                          </td>
                           <td className="py-3 px-4">
                             <button
-                              onClick={() => router.push(`/tasks/${task.id}`)}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                router.push(`/tasks/${task.id}`);
+                              }}
                               className="text-slate-400 hover:text-cyan-400 mr-3"
+                              type="button"
                             >
                               Edit
                             </button>
@@ -383,7 +423,7 @@ export default function DashboardPage() {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={5} className="py-8 px-4 text-center text-slate-500">
+                        <td colSpan={8} className="py-8 px-4 text-center text-slate-500">
                           No tasks found. Create your first task to get started!
                         </td>
                       </tr>
@@ -395,6 +435,13 @@ export default function DashboardPage() {
           </div>
         </section>
       </main>
+
+      <TaskDetailsModal
+        task={selectedTask}
+        isOpen={isTaskModalOpen}
+        onClose={() => setIsTaskModalOpen(false)}
+        onEdit={handleEditTask}
+      />
     </div>
   );
 }
