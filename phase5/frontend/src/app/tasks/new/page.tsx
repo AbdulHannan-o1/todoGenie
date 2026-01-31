@@ -73,7 +73,7 @@ export default function NewTaskPage() {
         exceptions: formData.recurrence_pattern.exceptions || []
       } : undefined;
 
-      await taskApi.createTask({
+      await taskApi.createTask(user.id, {
         title: formData.title,
         description: formData.description,
         priority: formData.priority,

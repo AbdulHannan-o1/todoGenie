@@ -63,11 +63,21 @@ class ChatbotService:
             )
 
             # Process message with AI agent
-            ai_response = await self.ai_agent.process_message(
-                message=sanitized_content,
-                user_id=str(user_id),
-                conversation_id=str(conversation.id) if conversation.id else None
-            )
+            # If this is an existing conversation, fetch history to provide context
+            if conversation_id:
+                conversation_history = await self.get_conversation_history(conversation.id, user_id)
+                ai_response = await self.ai_agent.chat_with_context(
+                    message=sanitized_content,
+                    user_id=str(user_id),
+                    conversation_history=conversation_history
+                )
+            else:
+                # For new conversations, use basic process_message
+                ai_response = await self.ai_agent.process_message(
+                    message=sanitized_content,
+                    user_id=str(user_id),
+                    conversation_id=str(conversation.id) if conversation.id else None
+                )
 
             # Save AI response to conversation
             if ai_response["success"]:

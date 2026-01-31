@@ -8,6 +8,7 @@ from ..schemas.task import TaskCreate, TaskUpdate, ReminderCreate, TaskCreateReq
 from ..services.reminder_service import ReminderService
 from ..services.task_crud_service import TaskCRUDService
 from ..services.task_query_service import TaskQueryService
+from ..services.task_hierarchy_service import TaskHierarchyService
 from .auth import get_current_user
 from ..models import User
 
@@ -193,6 +194,64 @@ def create_tasks_router() -> APIRouter:
         reminder_service = ReminderService(session)
         reminder_service.create_reminder(task, reminder_create.reminder_date)
         return {"message": "Reminder created successfully"}
+
+    @router.get("/{user_id}/tasks/{task_id}/children", response_model=List[Task])
+    def get_task_children(
+        user_id: UUID,
+        task_id: UUID,
+        current_user: User = Depends(get_current_user),
+        session: Session = Depends(get_session)
+    ):
+        """
+        Get all child tasks for a parent task.
+        """
+        if str(current_user.id) != str(user_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to view tasks for this user"
+            )
+
+        hierarchy_service = TaskHierarchyService(session)
+        return hierarchy_service.get_task_children(task_id, current_user.id)
+
+    @router.post("/{user_id}/tasks/{task_id}/children", response_model=Task)
+    def create_child_task(
+        user_id: UUID,
+        task_id: UUID,
+        task_create: TaskCreateRequest,
+        current_user: User = Depends(get_current_user),
+        session: Session = Depends(get_session)
+    ):
+        """
+        Create a child task under a parent task.
+        """
+        if str(current_user.id) != str(user_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to create tasks for this user"
+            )
+
+        hierarchy_service = TaskHierarchyService(session)
+        return hierarchy_service.create_child_task(task_id, task_create, current_user.id)
+
+    @router.get("/{user_id}/tasks/{task_id}/ancestors", response_model=List[Task])
+    def get_task_ancestors(
+        user_id: UUID,
+        task_id: UUID,
+        current_user: User = Depends(get_current_user),
+        session: Session = Depends(get_session)
+    ):
+        """
+        Get all ancestor tasks for a child task (returns the parent and higher-level ancestors).
+        """
+        if str(current_user.id) != str(user_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to view tasks for this user"
+            )
+
+        hierarchy_service = TaskHierarchyService(session)
+        return hierarchy_service.get_task_ancestors(task_id, current_user.id)
 
     return router
 

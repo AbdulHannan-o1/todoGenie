@@ -63,6 +63,7 @@ export default function DashboardPage() {
       setLoading(true);
       if (user?.id) {
         const tasksData = await taskApi.getTasks(
+          user.id,
           searchTerm || undefined,
           priorityFilter || undefined,
           statusFilter || undefined
@@ -83,7 +84,7 @@ export default function DashboardPage() {
         const newStatus = task.status === 'completed' ? 'pending' : 'completed';
 
         // Update the task with the new status, including required fields
-        const updatedTask = await taskApi.updateTask(task.id, {
+        const updatedTask = await taskApi.updateTask(user.id, task.id, {
           title: task.title, // Required field
           status: newStatus
         });
@@ -105,7 +106,7 @@ export default function DashboardPage() {
   const handleDeleteTask = async (taskId: string) => {
     try {
       if (user?.id) {
-        await taskApi.deleteTask(taskId);
+        await taskApi.deleteTask(user.id, taskId);
         setTasks(tasks.filter(task => task.id !== taskId));
       }
     } catch (error) {
@@ -385,10 +386,9 @@ export default function DashboardPage() {
                             })() : 'N/A'}
                           </td>
                           <td className="py-3 px-4 text-slate-300">
-                            {task.recurrence_pattern ? (() => {
+                            {task.recurrence_pattern && (task.recurrence_pattern.frequency as string) !== 'none' ? (() => {
                               const { frequency, interval } = task.recurrence_pattern;
-                              if (!frequency || (frequency as string) === 'none') return 'None';
-                              return `${interval > 1 ? interval : ''} ${frequency}${interval > 1 ? 's' : ''}`;
+                              return `${interval > 1 ? interval : ''} ${frequency}${interval > 1 ? 's' : ''}`.trim();
                             })() : 'None'}
                           </td>
                           <td className="py-3 px-4 text-slate-300">

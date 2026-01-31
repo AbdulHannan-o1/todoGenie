@@ -27,8 +27,12 @@ export default function TaskDetailsModal({
       // Fetch child tasks for this task
       const fetchChildTasks = async () => {
         try {
-          const childTasksData = await taskApi.getChildTasks(task.id);
-          setChildTasks(childTasksData);
+          // Get user ID from localStorage
+          const user = JSON.parse(localStorage.getItem('user') || '{}');
+          if (user.id) {
+            const childTasksData = await taskApi.getChildTasks(user.id, task.id);
+            setChildTasks(childTasksData);
+          }
         } catch (error) {
           console.error('Error fetching child tasks:', error);
           setChildTasks([]); // Set to empty array on error
@@ -128,7 +132,7 @@ export default function TaskDetailsModal({
                 </div>
               )}
 
-              {task.recurrence_pattern && (
+              {task.recurrence_pattern && task.recurrence_pattern.frequency !== 'none' && (
                 <div className="flex items-center text-slate-300">
                   <Repeat className="h-4 w-4 mr-2" />
                   <span className="font-semibold mr-2">Recurrence:</span>

@@ -99,7 +99,7 @@ export default function EditTaskPage({ params }: EditTaskPageProps) {
   const fetchTask = async () => {
     try {
       if (user?.id) {
-        const task: Task = await taskApi.getTaskById(taskId);
+        const task: Task = await taskApi.getTaskById(user.id, taskId);
         setFormData({
           title: task.title,
           description: task.description || "",
@@ -165,7 +165,7 @@ export default function EditTaskPage({ params }: EditTaskPageProps) {
         exceptions: formData.recurrence_pattern.exceptions || []
       } : undefined;
 
-      await taskApi.updateTask(taskId, {
+      await taskApi.updateTask(user.id, taskId, {
         title: formData.title, // Required field
         description: formData.description,
         status: formData.completed ? 'completed' : 'pending',

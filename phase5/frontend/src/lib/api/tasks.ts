@@ -42,14 +42,9 @@ export interface RecurrencePattern {
 // Note: These functions use the authenticated user from the JWT token
 export const taskApi = {
   // Create a new task
-  createTask: async (taskData: TaskCreateData): Promise<Task> => {
-    // Get the current user's ID from localStorage or another source
-    // For now, we'll need to get the user ID from the token or profile
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const userId = user.id;
-
+  createTask: async (userId: string, taskData: TaskCreateData): Promise<Task> => {
     if (!userId) {
-      throw new Error('User not authenticated or user ID not available');
+      throw new Error('User ID is required');
     }
 
     const response = await apiClient.post<Task>(`/api/${userId}/tasks`, taskData);
@@ -58,18 +53,15 @@ export const taskApi = {
 
   // Get all tasks for the authenticated user with optional filtering
   getTasks: async (
+    userId: string,
     search?: string,
     priority?: string,
     status?: string,
     tags?: string[],
     sortBy: string = "due_date",
     sortOrder: string = "asc"): Promise<Task[]> => {
-    // Get the current user's ID from localStorage or another source
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const userId = user.id;
-
     if (!userId) {
-      throw new Error('User not authenticated or user ID not available');
+      throw new Error('User ID is required');
     }
 
     // Build query parameters
@@ -89,13 +81,9 @@ export const taskApi = {
   },
 
   // Get a specific task by ID
-  getTaskById: async (taskId: string): Promise<Task> => {
-    // Get the current user's ID from localStorage or another source
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const userId = user.id;
-
+  getTaskById: async (userId: string, taskId: string): Promise<Task> => {
     if (!userId) {
-      throw new Error('User not authenticated or user ID not available');
+      throw new Error('User ID is required');
     }
 
     const response = await apiClient.get<Task>(`/api/${userId}/tasks/${taskId}`);
@@ -103,13 +91,9 @@ export const taskApi = {
   },
 
   // Update a task
-  updateTask: async (taskId: string, taskData: TaskUpdateData): Promise<Task> => {
-    // Get the current user's ID from localStorage or another source
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const userId = user.id;
-
+  updateTask: async (userId: string, taskId: string, taskData: TaskUpdateData): Promise<Task> => {
     if (!userId) {
-      throw new Error('User not authenticated or user ID not available');
+      throw new Error('User ID is required');
     }
 
     const response = await apiClient.put<Task>(`/api/${userId}/tasks/${taskId}`, taskData);
@@ -117,26 +101,18 @@ export const taskApi = {
   },
 
   // Delete a task
-  deleteTask: async (taskId: string): Promise<void> => {
-    // Get the current user's ID from localStorage or another source
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const userId = user.id;
-
+  deleteTask: async (userId: string, taskId: string): Promise<void> => {
     if (!userId) {
-      throw new Error('User not authenticated or user ID not available');
+      throw new Error('User ID is required');
     }
 
     await apiClient.delete(`/api/${userId}/tasks/${taskId}`);
   },
 
   // Mark a task as complete
-  completeTask: async (taskId: string): Promise<Task> => {
-    // Get the current user's ID from localStorage or another source
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const userId = user.id;
-
+  completeTask: async (userId: string, taskId: string): Promise<Task> => {
     if (!userId) {
-      throw new Error('User not authenticated or user ID not available');
+      throw new Error('User ID is required');
     }
 
     const response = await apiClient.patch<Task>(`/api/${userId}/tasks/${taskId}/complete`);
@@ -144,12 +120,9 @@ export const taskApi = {
   },
 
   // Get child tasks for a parent task
-  getChildTasks: async (taskId: string): Promise<Task[]> => {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const userId = user.id;
-
+  getChildTasks: async (userId: string, taskId: string): Promise<Task[]> => {
     if (!userId) {
-      throw new Error('User not authenticated or user ID not available');
+      throw new Error('User ID is required');
     }
 
     const response = await apiClient.get<Task[]>(`/api/${userId}/tasks/${taskId}/children`);
@@ -157,12 +130,9 @@ export const taskApi = {
   },
 
   // Create a child task under a parent task
-  createChildTask: async (taskId: string, taskData: TaskCreateData): Promise<Task> => {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const userId = user.id;
-
+  createChildTask: async (userId: string, taskId: string, taskData: TaskCreateData): Promise<Task> => {
     if (!userId) {
-      throw new Error('User not authenticated or user ID not available');
+      throw new Error('User ID is required');
     }
 
     const response = await apiClient.post<Task>(`/api/${userId}/tasks/${taskId}/children`, taskData);
@@ -170,12 +140,9 @@ export const taskApi = {
   },
 
   // Get parent tasks (ancestors) for a task
-  getParentTasks: async (taskId: string): Promise<Task[]> => {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const userId = user.id;
-
+  getParentTasks: async (userId: string, taskId: string): Promise<Task[]> => {
     if (!userId) {
-      throw new Error('User not authenticated or user ID not available');
+      throw new Error('User ID is required');
     }
 
     const response = await apiClient.get<Task[]>(`/api/${userId}/tasks/${taskId}/ancestors`);
@@ -183,12 +150,9 @@ export const taskApi = {
   },
 
   // Get upcoming reminders for a user
-  getUpcomingReminders: async (hoursAhead: number = 24): Promise<any[]> => {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const userId = user.id;
-
+  getUpcomingReminders: async (userId: string, hoursAhead: number = 24): Promise<any[]> => {
     if (!userId) {
-      throw new Error('User not authenticated or user ID not available');
+      throw new Error('User ID is required');
     }
 
     const response = await apiClient.get<any[]>(`/api/${userId}/tasks/reminders/upcoming?hours_ahead=${hoursAhead}`);

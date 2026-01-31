@@ -183,3 +183,110 @@ class TaskHierarchyService:
             all_descendants.extend(self._get_all_descendants(child.id, user_id))
 
         return all_descendants
+
+    def get_task_children(self, task_id: UUID, user_id: UUID) -> List[Task]:
+        """
+        Get all child tasks for a parent task.
+
+        Args:
+            task_id: The ID of the parent task
+            user_id: The ID of the user
+
+        Returns:
+            List of child tasks
+        """
+        # Verify the parent task exists and belongs to the user
+        parent_task = self.session.exec(
+            select(Task).where(Task.id == task_id, Task.user_id == user_id)
+        ).first()
+
+        if not parent_task:
+            return []
+
+        # Get all tasks that have this task as their parent
+        children = self.session.exec(
+            select(Task).where(Task.parent_task_id == task_id, Task.user_id == user_id)
+        ).all()
+
+        return children
+
+    def create_child_task(self, parent_task_id: UUID, task_create_request, user_id: UUID) -> Task:
+        """
+        Create a child task under a parent task.
+
+        Args:
+            parent_task_id: The ID of the parent task
+            task_create_request: The task creation request object
+            user_id: The ID of the user
+
+        Returns:
+            The created child task
+        """
+        # Verify the parent task exists and belongs to the user
+        parent_task = self.session.exec(
+            select(Task).where(Task.id == parent_task_id, Task.user_id == user_id)
+        ).first()
+
+        if not parent_task:
+            raise ValueError("Parent task not found or not owned by user")
+
+        # Create the child task with the parent_task_id set
+        task_data = task_create_request.model_dump()
+        child_task = Task(
+            user_id=user_id,
+            parent_task_id=parent_task_id,
+            title=task_data.get('title'),
+            description=task_data.get('description', ''),
+            status=task_data.get('status', 'pending'),
+            priority=task_data.get('priority', 'medium'),
+            recurrence_pattern=task_data.get('recurrence_pattern'),
+            due_date=task_data.get('due_date'),
+            reminder_time=task_data.get('reminder_time'),
+            tags=task_data.get('tags', ''),
+            ai_generated=task_data.get('ai_generated', False),
+            ai_intent=task_data.get('ai_intent'),
+            ai_context_id=task_data.get('ai_context_id')
+        )
+
+        self.session.add(child_task)
+        self.session.commit()
+        self.session.refresh(child_task)
+
+        return child_task
+
+    def get_task_ancestors(self, task_id: UUID, user_id: UUID) -> List[Task]:
+        """
+        Get all ancestor tasks for a child task (returns the parent and higher-level ancestors).
+
+        Args:
+            task_id: The ID of the child task
+            user_id: The ID of the user
+
+        Returns:
+            List of ancestor tasks in order from direct parent to top-level ancestor
+        """
+        # Verify the task exists and belongs to the user
+        current_task = self.session.exec(
+            select(Task).where(Task.id == task_id, Task.user_id == user_id)
+        ).first()
+
+        if not current_task:
+            return []
+
+        ancestors = []
+        current_parent_id = current_task.parent_task_id
+
+        # Traverse up the hierarchy to find all ancestors
+        while current_parent_id:
+            parent_task = self.session.exec(
+                select(Task).where(Task.id == current_parent_id, Task.user_id == user_id)
+            ).first()
+
+            if parent_task:
+                ancestors.append(parent_task)
+                current_parent_id = parent_task.parent_task_id
+            else:
+                break  # Parent not found, stop traversal
+
+        # Return ancestors in order from direct parent to top-level ancestor
+        return list(reversed(ancestors))

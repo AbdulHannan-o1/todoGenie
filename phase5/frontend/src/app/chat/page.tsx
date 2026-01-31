@@ -34,6 +34,28 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isConversationsLoading, setIsConversationsLoading] = useState(true); // Start as loading
   const [error, setError] = useState<string | null>(null);
+
+  // Initialize from stored conversation state if available
+  useEffect(() => {
+    const initializeFromStorage = async () => {
+      if (typeof window !== 'undefined') {
+        try {
+          const { loadConversationState } = await import('@/utils/conversation-storage');
+          const state = loadConversationState();
+          if (state && state.messages.length > 0) {
+            setMessages(state.messages);
+            if (state.selectedConversationId) {
+              setSelectedConversationId(state.selectedConversationId);
+            }
+          }
+        } catch (error) {
+          console.error('Error loading conversation from storage:', error);
+        }
+      }
+    };
+
+    initializeFromStorage();
+  }, []);
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
 
   useEffect(() => {
@@ -48,28 +70,32 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (isAuthenticated && !authIsLoading) {
-      // Check for cached conversation from preloading or previous visit
-      import('@/utils/conversation-preloader').then(mod => {
-        const cached = mod.getRecentConversationFromCache();
-        if (cached) {
-          const { conversation, history } = cached;
-          setConversations([conversation]);
-          setSelectedConversationId(conversation.id);
+      // Check if there's an active conversation in storage before loading all conversations
+      const checkAndLoadConversation = async () => {
+        try {
+          const { hasActiveConversation, loadConversationState } = await import('@/utils/conversation-storage');
 
-          const formattedMessages = history.messages.map((msg: any, index: number) => ({
-            id: msg.id || (index + 1),
-            text: msg.content,
-            sender: msg.role === 'assistant' ? 'bot' : 'user',
-          }));
-          setMessages(formattedMessages);
+          if (hasActiveConversation()) {
+            // If there's an active conversation in storage, use it
+            const storedState = loadConversationState();
+            if (storedState) {
+              setMessages(storedState.messages);
+              if (storedState.selectedConversationId) {
+                setSelectedConversationId(storedState.selectedConversationId);
+              }
+            }
+          } else {
+            // Otherwise, load conversations and initialize with welcome message
+            loadConversationsWithWelcome();
+          }
+        } catch (error) {
+          console.error('Error checking stored conversation:', error);
+          // Fallback to loading conversations normally
+          loadConversationsWithWelcome();
         }
+      };
 
-        // Load fresh data in background
-        loadConversationsAndLatest();
-      }).catch(() => {
-        // If there's an error importing, still load fresh data
-        loadConversationsAndLatest();
-      });
+      checkAndLoadConversation();
     }
   }, [isAuthenticated, authIsLoading]);
 
@@ -77,8 +103,61 @@ export default function ChatPage() {
     scrollToBottom();
   }, [messages]);
 
+  // Clear conversation state when user logs out
+  useEffect(() => {
+    if (!isAuthenticated && !authIsLoading) {
+      const clearStoredConversation = async () => {
+        try {
+          const { clearConversationState } = await import('@/utils/conversation-storage');
+          clearConversationState();
+        } catch (error) {
+          console.error('Error clearing conversation state on logout:', error);
+        }
+      };
+
+      clearStoredConversation();
+    }
+  }, [isAuthenticated, authIsLoading]);
+
   // Removed the useEffect that loads conversation history based on selectedConversationId
   // It's now handled in loadConversationsAndLatest
+
+  const loadConversationsWithWelcome = async () => {
+    setIsConversationsLoading(true);
+    try {
+      // Fetch all conversations from API (ignore any cached conversation for auto-selection)
+      const response = await fetch('/api/v1/chat/conversations', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setConversations(data);
+
+        // Never auto-select any conversation, always show welcome message
+        setSelectedConversationId(null);
+        setMessages([
+          { id: 1, text: "Hello! I'm your AI assistant. How can I help you with your tasks today?", sender: "bot" },
+        ]);
+      } else {
+        // If API fails, show welcome message
+        setMessages([
+          { id: 1, text: "Hello! I'm your AI assistant. How can I help you with your tasks today?", sender: "bot" },
+        ]);
+        setSelectedConversationId(null);
+      }
+    } catch (error) {
+      console.error('Error loading conversations:', error);
+      // In case of error, show welcome message
+      setMessages([
+        { id: 1, text: "Hello! I'm your AI assistant. How can I help you with your tasks today?", sender: "bot" },
+      ]);
+      setSelectedConversationId(null);
+    } finally {
+      setIsConversationsLoading(false);
+    }
+  };
 
   const loadConversationsAndLatest = async () => {
     setIsConversationsLoading(true);
@@ -111,30 +190,12 @@ export default function ChatPage() {
           setConversations(data);
 
           if (data.length > 0) {
-            // Select and load the most recent conversation automatically
-            const mostRecentConversation = data[0]; // Conversations are ordered by updated_at desc
-            setSelectedConversationId(mostRecentConversation.id);
-
-            // Load the history for the most recent conversation
-            const historyResponse = await fetch(`/api/v1/chat/conversations/${mostRecentConversation.id}`, {
-              headers: {
-                'Authorization': `Bearer ${token}`,
-              }
-            });
-
-            if (historyResponse.ok) {
-              const historyData = await historyResponse.json();
-              // Transform backend messages to frontend format
-              const formattedMessages = historyData.messages.map((msg: any, index: number) => ({
-                id: msg.id || (index + 1),
-                text: msg.content,
-                sender: msg.role === 'assistant' ? 'bot' : 'user',
-              }));
-              setMessages(formattedMessages);
-            } else {
-              // If conversation history fails to load, start with empty messages
-              setMessages([]);
-            }
+            // Don't auto-select the most recent conversation automatically anymore
+            // The user will select a conversation manually
+            setSelectedConversationId(null);
+            setMessages([
+              { id: 1, text: "Hello! I'm your AI assistant. How can I help you with your tasks today?", sender: "bot" },
+            ]);
           } else {
             // If no conversations exist, show welcome message
             setMessages([
@@ -201,8 +262,13 @@ export default function ChatPage() {
     }
   };
 
-  const createNewConversation = () => {
+  const createNewConversation = async () => {
     setSelectedConversationId(null);
+
+    // Clear conversation state from localStorage
+    const { clearConversationState } = await import('@/utils/conversation-storage');
+    clearConversationState();
+
     setMessages([
       { id: 1, text: "Hello! I'm your AI assistant. How can I help you with your tasks today?", sender: "bot" },
     ]);
@@ -224,7 +290,8 @@ export default function ChatPage() {
       sender: "user" as const,
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
     setInputMessage("");
     setIsLoading(true);
 
@@ -252,8 +319,10 @@ export default function ChatPage() {
       const data = await response.json();
 
       // Update the selected conversation ID if it was created
+      let newSelectedConversationId = selectedConversationId;
       if (data.conversation_id && !selectedConversationId) {
-        setSelectedConversationId(data.conversation_id);
+        newSelectedConversationId = data.conversation_id;
+        setSelectedConversationId(newSelectedConversationId);
         // Refresh the conversation list
         loadConversations();
       }
@@ -265,7 +334,16 @@ export default function ChatPage() {
         sender: "bot" as const,
       };
 
-      setMessages((prev) => [...prev, botResponse]);
+      const finalMessages = [...updatedMessages, botResponse];
+      setMessages(finalMessages);
+
+      // Save conversation state to localStorage
+      const { saveConversationState } = await import('@/utils/conversation-storage');
+      saveConversationState({
+        conversationId: data.conversation_id || newSelectedConversationId,
+        messages: finalMessages,
+        selectedConversationId: newSelectedConversationId,
+      });
     } catch (error: any) {
       console.error('Error sending message:', error);
 
@@ -279,7 +357,16 @@ export default function ChatPage() {
         sender: "bot" as const,
       };
 
-      setMessages((prev) => [...prev, errorMessage]);
+      const finalMessages = [...updatedMessages, errorMessage];
+      setMessages(finalMessages);
+
+      // Save conversation state to localStorage including error
+      const { saveConversationState } = await import('@/utils/conversation-storage');
+      saveConversationState({
+        conversationId: selectedConversationId,
+        messages: finalMessages,
+        selectedConversationId: selectedConversationId,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -362,30 +449,41 @@ export default function ChatPage() {
 
               {selectedConversationId && (
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     if (confirm('Are you sure you want to delete this conversation?')) {
-                      fetch(`/api/v1/chat/conversations/${selectedConversationId}`, {
-                        method: 'DELETE',
-                        headers: {
-                          'Authorization': `Bearer ${token}`,
-                        },
-                      })
-                      .then(() => {
-                        // Remove the deleted conversation from the local list
-                        setConversations(prev => prev.filter(conv => conv.id !== selectedConversationId));
+                      try {
+                        const response = await fetch(`/api/v1/chat/conversations/${selectedConversationId}`, {
+                          method: 'DELETE',
+                          headers: {
+                            'Authorization': `Bearer ${token}`,
+                          },
+                        });
 
-                        // If this was the selected conversation, clear selection and show welcome message
-                        if (selectedConversationId) {
-                          setSelectedConversationId(null);
-                          setMessages([
-                            { id: 1, text: "Hello! I'm your AI assistant. How can I help you with your tasks today?", sender: "bot" },
-                          ]);
+                        if (response.ok) {
+                          // Remove the deleted conversation from the local list
+                          setConversations(prev => prev.filter(conv => conv.id !== selectedConversationId));
+
+                          // If this was the selected conversation, clear selection and show welcome message
+                          if (selectedConversationId) {
+                            setSelectedConversationId(null);
+
+                            // Clear conversation state from localStorage
+                            const { clearConversationState } = await import('@/utils/conversation-storage');
+                            clearConversationState();
+
+                            setMessages([
+                              { id: 1, text: "Hello! I'm your AI assistant. How can I help you with your tasks today?", sender: "bot" },
+                            ]);
+                          }
+
+                          // Reload conversations list
+                          loadConversations();
+                        } else {
+                          console.error('Error deleting conversation:', response.statusText);
                         }
-
-                        // Reload conversations list
-                        loadConversations();
-                      })
-                      .catch(error => console.error('Error deleting conversation:', error));
+                      } catch (error) {
+                        console.error('Error deleting conversation:', error);
+                      }
                     }
                   }}
                   className="p-2 rounded-lg bg-red-600/50 hover:bg-red-600 transition-colors"
@@ -501,7 +599,8 @@ export default function ChatPage() {
                           sender: "user" as const,
                         };
 
-                        setMessages((prev) => [...prev, userMessage]);
+                        const updatedMessages = [...messages, userMessage];
+                        setMessages(updatedMessages);
                         setIsLoading(true);
 
                         try {
@@ -528,8 +627,10 @@ export default function ChatPage() {
                           const data = await response.json();
 
                           // Update the selected conversation ID if it was created
+                          let newSelectedConversationId = selectedConversationId;
                           if (data.conversation_id && !selectedConversationId) {
-                            setSelectedConversationId(data.conversation_id);
+                            newSelectedConversationId = data.conversation_id;
+                            setSelectedConversationId(newSelectedConversationId);
                             // Refresh the conversation list
                             loadConversations();
                           }
@@ -541,7 +642,16 @@ export default function ChatPage() {
                             sender: "bot" as const,
                           };
 
-                          setMessages((prev) => [...prev, botResponse]);
+                          const finalMessages = [...updatedMessages, botResponse];
+                          setMessages(finalMessages);
+
+                          // Save conversation state to localStorage
+                          const { saveConversationState } = await import('@/utils/conversation-storage');
+                          saveConversationState({
+                            conversationId: data.conversation_id || newSelectedConversationId,
+                            messages: finalMessages,
+                            selectedConversationId: newSelectedConversationId,
+                          });
                         } catch (error: any) {
                           console.error('Error sending voice message:', error);
 
@@ -555,7 +665,16 @@ export default function ChatPage() {
                             sender: "bot" as const,
                           };
 
-                          setMessages((prev) => [...prev, errorMessage]);
+                          const finalMessages = [...updatedMessages, errorMessage];
+                          setMessages(finalMessages);
+
+                          // Save conversation state to localStorage including error
+                          const { saveConversationState } = await import('@/utils/conversation-storage');
+                          saveConversationState({
+                            conversationId: selectedConversationId,
+                            messages: finalMessages,
+                            selectedConversationId: selectedConversationId,
+                          });
                         } finally {
                           setIsLoading(false);
                         }
@@ -630,8 +749,46 @@ export default function ChatPage() {
                         ? 'bg-cyan-600/20 border border-cyan-500'
                         : 'bg-slate-700/50 hover:bg-slate-700'
                     }`}
-                    onClick={() => {
+                    onClick={async () => {
                       setSelectedConversationId(conversation.id);
+
+                      // Load conversation history from backend
+                      try {
+                        const response = await fetch(`/api/v1/chat/conversations/${conversation.id}`, {
+                          headers: {
+                            'Authorization': `Bearer ${token}`,
+                          }
+                        });
+
+                        if (response.ok) {
+                          const data = await response.json();
+                          // Transform backend messages to frontend format
+                          const formattedMessages = data.messages.map((msg: any, index: number) => ({
+                            id: msg.id || (index + 1),
+                            text: msg.content,
+                            sender: msg.role === 'assistant' ? 'bot' : 'user',
+                          }));
+
+                          setMessages(formattedMessages);
+
+                          // Save conversation state to localStorage
+                          const { saveConversationState } = await import('@/utils/conversation-storage');
+                          saveConversationState({
+                            conversationId: conversation.id,
+                            messages: formattedMessages,
+                            selectedConversationId: conversation.id,
+                          });
+                        } else {
+                          // If conversation doesn't exist yet, start with empty messages
+                          setMessages([]);
+                        }
+                      } catch (error) {
+                        console.error('Error loading conversation history:', error);
+                        setMessages([
+                          { id: 1, text: "Hello! I'm your AI assistant. How can I help you with your tasks today?", sender: "bot" },
+                        ]);
+                      }
+
                       setIsConversationsSidebarOpen(false); // Close sidebar after selection
                     }}
                   >
