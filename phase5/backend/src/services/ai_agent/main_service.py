@@ -107,9 +107,12 @@ class AIAgentService:
                     "You can create, list, update, delete, complete tasks, and manage advanced features using these tools:\n"
                     "- create_task: Create new tasks (also triggered by 'add', 'make', 'create')\n"
                     "- list_tasks: Show current tasks\n"
-                    "- update_task: Modify existing tasks\n"
-                    "- delete_task: Remove tasks\n"
-                    "- complete_task: Mark tasks as done\n\n"
+                    "- update_task: Modify existing tasks (requires task ID)\n"
+                    "- update_tasks_by_description: Update multiple tasks based on description criteria (title, priority, status) instead of requiring IDs\n"
+                    "- delete_task: Remove tasks (requires task ID)\n"
+                    "- delete_tasks_by_description: Delete multiple tasks based on description criteria (title, priority, status) instead of requiring IDs\n"
+                    "- complete_task: Mark tasks as done (requires task ID)\n"
+                    "- complete_task_by_description: Mark multiple tasks as complete based on description criteria (title, priority, status) instead of requiring IDs\n\n"
 
                     "ADVANCED FEATURES:\n"
                     "You can also manage these advanced features:\n"
@@ -173,7 +176,7 @@ class AIAgentService:
 
             # Agentic loop: keep calling the AI until it stops making tool calls
             messages = [system_message, user_message]
-            max_iterations = 5  # Prevent infinite loops
+            max_iterations = 50  # Prevent infinite loops
             all_tool_results = []
 
             for iteration in range(max_iterations):
@@ -412,9 +415,12 @@ class AIAgentService:
                     "You can create, list, update, delete, complete tasks, and manage advanced features using these tools:\n"
                     "- create_task: Create new tasks (also triggered by 'add', 'make', 'create')\n"
                     "- list_tasks: Show current tasks\n"
-                    "- update_task: Modify existing tasks\n"
-                    "- delete_task: Remove tasks\n"
-                    "- complete_task: Mark tasks as done\n\n"
+                    "- update_task: Modify existing tasks (requires task ID)\n"
+                    "- update_tasks_by_description: Update multiple tasks based on description criteria (title, priority, status) instead of requiring IDs\n"
+                    "- delete_task: Remove tasks (requires task ID)\n"
+                    "- delete_tasks_by_description: Delete multiple tasks based on description criteria (title, priority, status) instead of requiring IDs\n"
+                    "- complete_task: Mark tasks as done (requires task ID)\n"
+                    "- complete_task_by_description: Mark multiple tasks as complete based on description criteria (title, priority, status) instead of requiring IDs\n\n"
 
                     "ADVANCED FEATURES:\n"
                     "You can also manage these advanced features:\n"

@@ -5,16 +5,18 @@ Proper startup script for the backend server that handles imports correctly
 import sys
 import os
 
-# Add the /app directory to the Python path to ensure imports work
-sys.path.insert(0, '/app')
+# Add the current working directory to the Python path to ensure imports work
+script_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, script_dir)
 
 # Print debug info
 print(f"Current working directory: {os.getcwd()}")
 print(f"Script location: {__file__}")
+print(f"Script directory: {script_dir}")
 print(f"Python path: {sys.path[:3]}...")  # Show first 3 paths
 
-# Change to the /app directory to ensure proper imports
-os.chdir('/app')
+# Change to the script directory to ensure proper imports
+os.chdir(script_dir)
 
 try:
     # Import the main app

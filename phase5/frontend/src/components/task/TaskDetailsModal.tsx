@@ -5,6 +5,7 @@ import { Clock, Repeat, Tag, FolderTree, Calendar, Bell } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { taskApi } from '@/lib/api/tasks';
+import { useAuth } from '@/context/auth-context';
 
 interface TaskDetailsModalProps {
   task: Task | null;
@@ -20,19 +21,16 @@ export default function TaskDetailsModal({
   onEdit
 }: TaskDetailsModalProps) {
   const router = useRouter();
+  const { user: currentUser } = useAuth();
   const [childTasks, setChildTasks] = useState<Task[]>([]);
 
   useEffect(() => {
-    if (task && isOpen) {
+    if (task && isOpen && currentUser?.id) {
       // Fetch child tasks for this task
       const fetchChildTasks = async () => {
         try {
-          // Get user ID from localStorage
-          const user = JSON.parse(localStorage.getItem('user') || '{}');
-          if (user.id) {
-            const childTasksData = await taskApi.getChildTasks(user.id, task.id);
-            setChildTasks(childTasksData);
-          }
+          const childTasksData = await taskApi.getChildTasks(currentUser.id, task.id);
+          setChildTasks(childTasksData);
         } catch (error) {
           console.error('Error fetching child tasks:', error);
           setChildTasks([]); // Set to empty array on error
@@ -44,7 +42,7 @@ export default function TaskDetailsModal({
       // Reset child tasks when modal is closed or task changes
       setChildTasks([]);
     }
-  }, [task, isOpen]);
+  }, [task, isOpen, currentUser]);
 
   if (!task) return null;
 
@@ -132,7 +130,7 @@ export default function TaskDetailsModal({
                 </div>
               )}
 
-              {task.recurrence_pattern && task.recurrence_pattern.frequency !== 'none' && (
+              {task.recurrence_pattern && (task.recurrence_pattern.frequency as string) !== 'none' && (
                 <div className="flex items-center text-slate-300">
                   <Repeat className="h-4 w-4 mr-2" />
                   <span className="font-semibold mr-2">Recurrence:</span>
@@ -190,12 +188,14 @@ export default function TaskDetailsModal({
 
             <div className="flex space-x-2 mt-6">
               <button
+                type="button"
                 onClick={onEdit}
                 className="flex-1 bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg transition-colors"
               >
                 Edit Task
               </button>
               <button
+                type="button"
                 onClick={onClose}
                 className="flex-1 border border-slate-600 text-slate-300 hover:bg-slate-700 px-4 py-2 rounded-lg transition-colors"
               >

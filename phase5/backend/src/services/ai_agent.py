@@ -264,9 +264,12 @@ class AIAgentService:
                     "You can create, list, update, delete, complete tasks, and manage advanced features using these tools:\n"
                     "- create_task: Create new tasks (also triggered by 'add', 'make', 'create')\n"
                     "- list_tasks: Show current tasks\n"
-                    "- update_task: Modify existing tasks\n"
-                    "- delete_task: Remove tasks\n"
-                    "- complete_task: Mark tasks as done\n\n"
+                    "- update_task: Modify existing tasks (requires task ID)\n"
+                    "- update_tasks_by_description: Update multiple tasks based on description criteria (title, priority, status) instead of requiring IDs\n"
+                    "- delete_task: Remove tasks (requires task ID)\n"
+                    "- delete_tasks_by_description: Delete multiple tasks based on description criteria (title, priority, status) instead of requiring IDs\n"
+                    "- complete_task: Mark tasks as done (requires task ID)\n"
+                    "- complete_task_by_description: Mark multiple tasks as complete based on description criteria (title, priority, status) instead of requiring IDs\n\n"
 
                     "ADVANCED FEATURES:\n"
                     "You can also manage these advanced features:\n"
@@ -330,7 +333,7 @@ class AIAgentService:
 
             # Agentic loop: keep calling the AI until it stops making tool calls
             messages = [system_message, user_message]
-            max_iterations = 5  # Prevent infinite loops
+            max_iterations = 50  # Prevent infinite loops
             all_tool_results = []
 
             for iteration in range(max_iterations):
@@ -455,10 +458,8 @@ class AIAgentService:
                     if function_args is None:
                         function_args = {}
 
-                    # Add user_id to the function arguments where needed
-                    function_args["user_id"] = user_id
-
                     # Execute the appropriate tool function with enhanced error handling
+                    # The execute_tool function handles user_id parameter distribution appropriately
                     try:
                         result = execute_tool(function_name, function_args, user_id)
                     except Exception as tool_error:
@@ -642,8 +643,8 @@ class AIAgentService:
         try:
             # Use conversation history if available
             if conversation_history:
-                # Limit the history to the last 10-15 messages to prevent token overflow
-                recent_history = conversation_history[-15:] if len(conversation_history) > 15 else conversation_history
+                # Limit the history to the last 25 messages to prevent token overflow
+                recent_history = conversation_history[-25:] if len(conversation_history) > 25 else conversation_history
 
                 # Prepare messages for the AI including conversation history
                 messages = []
@@ -676,7 +677,7 @@ class AIAgentService:
 
                         "CONVERSATIONAL INTELLIGENCE:\n"
                         "- Engage in friendly chat about life, problems, goals\n"
-                        "- Detect when user mentions tasks during conversation\n"
+                        " - Detect when user mentions tasks during conversation\n"
                         "- Recognize various ways users might ask about tasks:\n"
                         "  * 'what are my tasks', 'show me pending tasks', 'list my tasks', 'what do I have to do'\n"
                         "- Extract tasks from natural conversation:\n"
@@ -868,7 +869,7 @@ class AIAgentService:
                 ]
 
                 # Agentic loop: keep calling the AI until it stops making tool calls
-                max_iterations = 5  # Prevent infinite loops
+                max_iterations = 50  # Prevent infinite loops
                 all_tool_results = []
 
                 for iteration in range(max_iterations):
@@ -993,10 +994,8 @@ class AIAgentService:
                         if function_args is None:
                             function_args = {}
 
-                        # Add user_id to the function arguments where needed
-                        function_args["user_id"] = user_id
-
                         # Execute the appropriate tool function with enhanced error handling
+                        # The execute_tool function handles user_id parameter distribution appropriately
                         try:
                             result = execute_tool(function_name, function_args, user_id)
                         except Exception as tool_error:

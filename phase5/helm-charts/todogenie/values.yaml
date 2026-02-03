@@ -15,7 +15,7 @@ backend:
     repository: todogenie-backend
     pullPolicy: IfNotPresent
     # Overrides the image tag whose default is the chart appVersion.
-    tag: "v24"
+    tag: "27"
   service:
     type: ClusterIP
     port: 8000
@@ -44,7 +44,7 @@ frontend:
     repository: todogenie-frontend
     pullPolicy: IfNotPresent
     # Overrides the image tag whose default is the chart appVersion.
-    tag: "v8"
+    tag: "13"
   service:
     type: ClusterIP
     port: 3000
@@ -92,7 +92,7 @@ networkPolicy:
 
 # Ingress configuration
 ingress:
-  enabled: true
+  enabled: false
   className: nginx
   annotations:
     kubernetes.io/ingress.class: nginx

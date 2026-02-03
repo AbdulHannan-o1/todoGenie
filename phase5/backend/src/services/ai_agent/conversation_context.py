@@ -26,7 +26,7 @@ def prepare_contextual_messages(
     messages.append(system_message)
 
     # Add conversation history to messages
-    recent_history = conversation_history[-15:] if len(conversation_history) > 15 else conversation_history  # Limit to last 15 messages
+    recent_history = conversation_history[-25:] if len(conversation_history) > 25 else conversation_history  # Limit to last 25 messages
 
     for hist_item in recent_history:
         # Convert history item to appropriate role and content
