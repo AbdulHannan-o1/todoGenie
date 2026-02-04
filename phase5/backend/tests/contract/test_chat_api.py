@@ -3,7 +3,7 @@ Contract tests for /api/v1/chat/send endpoint
 """
 import pytest
 from fastapi.testclient import TestClient
-from main import app  # Assuming your FastAPI app is in main.py
+from src.main import app  # Updated to import from correct location
 from auth import get_current_user
 from models import User
 import uuid

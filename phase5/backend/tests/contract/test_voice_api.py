@@ -3,7 +3,7 @@ Contract tests for /api/v1/chat/voice-recognize endpoint
 """
 import pytest
 from fastapi.testclient import TestClient
-from main import app
+from src.main import app
 from auth import get_current_user
 from models import User
 import uuid

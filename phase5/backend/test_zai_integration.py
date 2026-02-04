@@ -38,7 +38,7 @@ def test_zai_integration():
         mock_openai.return_value = mock_client_instance
 
         # Import and test the AI agent service
-        from services.ai_agent import AIAgentService
+        from src.services.ai_agent import AIAgentService
 
         # Temporarily override settings to use test key
         original_zai_key = settings.zai_api_key
@@ -72,7 +72,7 @@ def test_zai_integration():
         mock_client_instance.chat.completions.create.return_value = mock_response
 
         # Import and test the AI agent service
-        from services.ai_agent import AIAgentService
+        from src.services.ai_agent import AIAgentService
 
         # Temporarily override settings to use test key
         original_zai_key = settings.zai_api_key

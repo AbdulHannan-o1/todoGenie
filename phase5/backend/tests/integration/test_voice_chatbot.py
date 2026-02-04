@@ -4,7 +4,7 @@ Integration tests for voice-based todo creation in chatbot
 import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock
-from main import app
+from src.main import app
 from auth import get_current_user
 from models import User
 import uuid

@@ -25,7 +25,7 @@ def test_task_operations():
 
         # Import the modules after mocking
         from core.config import settings
-        from services.ai_agent import AIAgentService
+        from src.services.ai_agent import AIAgentService
 
         # Temporarily override settings to use test key
         original_zai_key = settings.zai_api_key
