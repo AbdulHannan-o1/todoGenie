@@ -13,7 +13,7 @@ from .auth import get_current_user
 from ..models import User
 
 def create_tasks_router() -> APIRouter:
-    router = APIRouter(prefix="/api", tags=["tasks"])
+    router = APIRouter(tags=["tasks"])  # No prefix, will be added in main.py
 
     @router.post("/{user_id}/tasks", response_model=Task, status_code=status.HTTP_201_CREATED)
     def create_task(

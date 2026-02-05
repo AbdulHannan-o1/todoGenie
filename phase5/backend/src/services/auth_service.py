@@ -11,7 +11,9 @@ def authenticate_user(session: Session, identifier: str, password: str) -> Optio
     user = get_user_by_email(session, identifier)
     if not user:
         user = get_user_by_username(session, identifier)
-    if not user or not verify_password(password, user.hashed_password):
+    if not user:
+        return None
+    if not verify_password(password, user.hashed_password):
         return None
     return user
 

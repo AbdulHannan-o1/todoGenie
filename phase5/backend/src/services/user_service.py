@@ -11,11 +11,19 @@ def create_user(session: Session, email: str, username: str, password: str) -> U
     user = User(email=email, username=username, hashed_password=hashed_password, status="Active")
     session.add(user)
     try:
-        session.commit()
-        # Refresh to get the ID and other server-generated values
-        session.refresh(user)
-        # Detach the object from the session to avoid relationship loading during serialization
+        # Flush to get server-generated values like ID
+        session.flush()
+
+        # Get the user ID before expunging (in case it's needed)
+        user_id = user.id
+
+        # Expunge immediately to detach from session before commit to avoid lazy loading issues
         session.expunge(user)
+
+        # Commit the transaction
+        session.commit()
+
+        # Return the fully detached user object
         return user
     except Exception as e:
         session.rollback()
@@ -29,12 +37,12 @@ def create_user(session: Session, email: str, username: str, password: str) -> U
             if 'ix_user_username' in str(e) or 'username' in str(e):
                 raise HTTPException(
                     status_code=400,
-                    detail="Username already exists"
+                    detail="Username already registered"
                 )
             elif 'ix_user_email' in str(e) or 'email' in str(e):
                 raise HTTPException(
                     status_code=400,
-                    detail="Email already exists"
+                    detail="Email already registered"
                 )
             else:
                 raise HTTPException(

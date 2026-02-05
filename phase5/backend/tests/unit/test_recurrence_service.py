@@ -26,7 +26,7 @@ def test_generate_recurring_task_daily(session: Session):
         user_id=UUID("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"),
         status="completed",
         priority="low",
-        recurrence="daily",
+        recurrence_pattern='{"type": "daily"}',
         due_date=original_due_date
     )
     session.add(original_task)
@@ -38,7 +38,13 @@ def test_generate_recurring_task_daily(session: Session):
     assert new_task.title == original_task.title
     assert new_task.user_id == original_task.user_id
     assert new_task.status == "pending"
-    assert new_task.recurrence == "daily"
+    import json
+    assert new_task.recurrence_pattern is not None
+    if isinstance(new_task.recurrence_pattern, str):
+        pattern_dict = json.loads(new_task.recurrence_pattern)
+        assert pattern_dict.get("type") == "daily"
+    else:
+        assert new_task.recurrence_pattern.get("type") == "daily"
     assert new_task.due_date.replace(tzinfo=UTC) == (original_due_date + timedelta(days=1)).replace(microsecond=0)
 
 def test_generate_recurring_task_weekly(session: Session):
@@ -48,7 +54,7 @@ def test_generate_recurring_task_weekly(session: Session):
         user_id=UUID("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"),
         status="completed",
         priority="low",
-        recurrence="weekly",
+        recurrence_pattern='{"type": "weekly"}',
         due_date=original_due_date
     )
     session.add(original_task)
@@ -57,7 +63,13 @@ def test_generate_recurring_task_weekly(session: Session):
 
     new_task = generate_recurring_task_instance(session, original_task)
     assert new_task is not None
-    assert new_task.recurrence == "weekly"
+    import json
+    assert new_task.recurrence_pattern is not None
+    if isinstance(new_task.recurrence_pattern, str):
+        pattern_dict = json.loads(new_task.recurrence_pattern)
+        assert pattern_dict.get("type") == "weekly"
+    else:
+        assert new_task.recurrence_pattern.get("type") == "weekly"
     assert new_task.due_date.replace(tzinfo=UTC) == (original_due_date + timedelta(weeks=1)).replace(microsecond=0)
 
 def test_generate_recurring_task_monthly(session: Session):
@@ -67,7 +79,7 @@ def test_generate_recurring_task_monthly(session: Session):
         user_id=UUID("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"),
         status="completed",
         priority="low",
-        recurrence="monthly",
+        recurrence_pattern='{"type": "monthly"}',
         due_date=original_due_date
     )
     session.add(original_task)
@@ -76,7 +88,13 @@ def test_generate_recurring_task_monthly(session: Session):
 
     new_task = generate_recurring_task_instance(session, original_task)
     assert new_task is not None
-    assert new_task.recurrence == "monthly"
+    import json
+    assert new_task.recurrence_pattern is not None
+    if isinstance(new_task.recurrence_pattern, str):
+        pattern_dict = json.loads(new_task.recurrence_pattern)
+        assert pattern_dict.get("type") == "monthly"
+    else:
+        assert new_task.recurrence_pattern.get("type") == "monthly"
     assert new_task.due_date.replace(tzinfo=UTC) == (original_due_date + timedelta(days=30)).replace(microsecond=0) # Simple monthly logic
 
 def test_no_recurrence_task(session: Session):
@@ -84,7 +102,7 @@ def test_no_recurrence_task(session: Session):
         title="One-time Task",
         user_id=UUID("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"),        status="completed",
         priority="low",
-        recurrence=None,
+        recurrence_pattern=None,
         due_date=datetime.now(UTC)
     )
     session.add(original_task)

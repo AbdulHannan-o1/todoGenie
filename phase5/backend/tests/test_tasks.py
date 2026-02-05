@@ -33,11 +33,11 @@ def test_create_task(client: TestClient, auth_headers: dict, session: Session):
     token = auth_headers["Authorization"].split(" ")[1]  # Extract token from "Bearer <token>"
     payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
     username = payload.get("sub")
-    from src.services.user_service import get_user_by_username
-    user = get_user_by_username(session, username)
+    from src.services.user_service import get_user_by_email
+    user = get_user_by_email(session, username)
 
     response = client.post(
-        f"/api/{user.id}/tasks",
+        f"/tasks/{user.id}/tasks",
         headers=auth_headers,
         json={"title": "Test Task", "status": "pending"},
     )
@@ -58,7 +58,7 @@ def test_get_tasks(client: TestClient, auth_headers: dict, session: Session):
     session.refresh(task1)
     session.refresh(task2)
 
-    response = client.get(f"/api/{user.id}/tasks", headers=auth_headers)
+    response = client.get(f"/tasks/{user.id}/tasks", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 2
@@ -73,7 +73,7 @@ def test_get_single_task(client: TestClient, auth_headers: dict, session: Sessio
     session.commit()
     session.refresh(task)
 
-    response = client.get(f"/api/{user.id}/tasks/{task.id}", headers=auth_headers)
+    response = client.get(f"/tasks/{user.id}/tasks/{task.id}", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
     assert data["title"] == "Single Task"
@@ -87,7 +87,7 @@ def test_get_single_task_unauthorized(client: TestClient, another_auth_headers: 
     session.commit()
     session.refresh(task)
 
-    response = client.get(f"/api/{user.id}/tasks/{task.id}", headers=another_auth_headers)
+    response = client.get(f"/tasks/{user.id}/tasks/{task.id}", headers=another_auth_headers)
     assert response.status_code == 404  # Should return 404 to prevent leaking task existence
     assert response.json()["detail"] == "Task not found"
 
@@ -100,7 +100,7 @@ def test_update_task(client: TestClient, auth_headers: dict, session: Session):
     session.refresh(task)
 
     response = client.put(
-        f"/api/{user.id}/tasks/{task.id}",
+        f"/tasks/{user.id}/tasks/{task.id}",
         headers=auth_headers,
         json={"title": "Updated Task"},
     )
@@ -117,7 +117,7 @@ def test_update_task_unauthorized(client: TestClient, another_auth_headers: dict
     session.refresh(task)
 
     response = client.put(
-        f"/api/{user.id}/tasks/{task.id}",
+        f"/tasks/{user.id}/tasks/{task.id}",
         headers=another_auth_headers,
         json={"title": "Attempted Update"},
     )
@@ -132,7 +132,7 @@ def test_delete_task(client: TestClient, auth_headers: dict, session: Session):
     session.commit()
     session.refresh(task)
 
-    response = client.delete(f"/api/{user.id}/tasks/{task.id}", headers=auth_headers)
+    response = client.delete(f"/tasks/{user.id}/tasks/{task.id}", headers=auth_headers)
     assert response.status_code == 204
     from sqlmodel import select
     assert session.exec(select(Task).filter(Task.id == task.id)).first() is None
@@ -145,6 +145,6 @@ def test_delete_task_unauthorized(client: TestClient, another_auth_headers: dict
     session.commit()
     session.refresh(task)
 
-    response = client.delete(f"/api/{user.id}/tasks/{task.id}", headers=another_auth_headers)
+    response = client.delete(f"/tasks/{user.id}/tasks/{task.id}", headers=another_auth_headers)
     assert response.status_code == 404  # Should return 404 to prevent leaking task existence
     assert response.json()["detail"] == "Task not found"

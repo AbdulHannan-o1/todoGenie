@@ -6,7 +6,7 @@ from ..models import User
 from ..schemas.user import UserRead
 from .auth import get_current_user
 
-router = APIRouter(prefix="/api/users", tags=["users"])
+router = APIRouter(tags=["users"])  # No prefix, will be added in main.py
 
 @router.get("/", response_model=List[UserRead])
 def read_users(

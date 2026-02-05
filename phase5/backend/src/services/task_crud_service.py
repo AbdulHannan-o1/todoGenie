@@ -10,8 +10,9 @@ class TaskCRUDService:
 
     def create_task(self, task: Task) -> Task:
         self.session.add(task)
-        self.session.commit()
-        self.session.refresh(task)
+        # Don't commit here - let the API layer handle the transaction
+        # Flush to handle server-generated values like ID
+        self.session.flush()
         # Detach the object from the session to avoid relationship loading during serialization
         self.session.expunge(task)
         return task
@@ -38,8 +39,9 @@ class TaskCRUDService:
         for key, value in task_update.model_dump(exclude_unset=True).items():
             setattr(task, key, value)
         self.session.add(task)
-        self.session.commit()
-        self.session.refresh(task)
+        # Don't commit here - let the API layer handle the transaction
+        # Flush to handle any server-generated updates
+        self.session.flush()
         # Detach the object from the session to avoid relationship loading during serialization
         self.session.expunge(task)
         return task
@@ -49,5 +51,7 @@ class TaskCRUDService:
         if not task:
             return False
         self.session.delete(task)
-        self.session.commit()
+        # Don't commit here - let the API layer handle the transaction
+        # Flush to make the deletion take effect
+        self.session.flush()
         return True

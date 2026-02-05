@@ -4,8 +4,8 @@ Contract tests for /api/v1/chat/send endpoint
 import pytest
 from fastapi.testclient import TestClient
 from src.main import app  # Updated to import from correct location
-from auth import get_current_user
-from models import User
+from src.api.dependencies import get_current_active_user
+from src.models import User
 import uuid
 
 
@@ -15,16 +15,17 @@ def client():
     with TestClient(app) as test_client:
         # Mock the authentication dependency
         def mock_get_current_user():
-            # Create a mock user with required attributes
+            # Create a mock user with required attributes based on the User model
             mock_user = User(
                 id=uuid.uuid4(),
                 email="test@example.com",
-                name="Test User",
-                password="hashed_password"  # This would be properly hashed in real scenario
+                username="testuser",
+                hashed_password="$2b$12$examplehashedpassword",  # Properly hashed password
+                status="Active"
             )
             return mock_user
 
-        app.dependency_overrides[get_current_user] = mock_get_current_user
+        app.dependency_overrides[get_current_active_user] = mock_get_current_user
         yield test_client
         app.dependency_overrides.clear()
 

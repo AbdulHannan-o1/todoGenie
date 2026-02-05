@@ -4,8 +4,8 @@ Contract tests for conversation management endpoints
 import pytest
 from fastapi.testclient import TestClient
 from src.main import app
-from auth import get_current_user
-from models import User
+from src.api.dependencies import get_current_active_user
+from src.models import User
 import uuid
 
 
@@ -18,12 +18,13 @@ def client():
             mock_user = User(
                 id=uuid.uuid4(),
                 email="test@example.com",
-                name="Test User",
-                password="hashed_password"
+                username="testuser",
+                hashed_password="$2b$12$examplehashedpassword",  # Properly hashed password
+                status="Active"
             )
             return mock_user
 
-        app.dependency_overrides[get_current_user] = mock_get_current_user
+        app.dependency_overrides[get_current_active_user] = mock_get_current_user
         yield test_client
         app.dependency_overrides.clear()
 

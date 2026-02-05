@@ -19,9 +19,9 @@ from ..utils.hash import verify_password
 from ..config import settings
 
 def create_auth_router() -> APIRouter:
-    router = APIRouter(prefix="/api/auth", tags=["auth"])
+    router = APIRouter(tags=["auth"])  # No prefix, will be added in main.py
 
-    @router.post("/register", response_model=UserRead)
+    @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
     def register_user(user_create: UserCreate, session: Session = Depends(get_session)):
         """
         Register a new user.
