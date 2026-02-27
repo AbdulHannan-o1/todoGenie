@@ -138,7 +138,8 @@ def _find_tasks_by_criteria(user_id: str, title: Optional[str] = None,
                            status: Optional[str] = None,
                            include_completed: bool = False) -> List[Dict]:
     """
-    Helper function to find tasks by various criteria
+    Helper function to find tasks by various criteria (title, description, priority, status)
+    Matches against both title AND description fields for flexibility
     """
     # Get all tasks for the user
     all_tasks_result = TaskOperationsService.list_tasks(
@@ -156,9 +157,13 @@ def _find_tasks_by_criteria(user_id: str, title: Optional[str] = None,
     for task in tasks:
         match = True
 
-        # Check title match (case-insensitive partial match)
-        if title and title.lower() not in task.get("title", "").lower():
-            match = False
+        # Check title or description match (case-insensitive partial match)
+        # This allows matching by task name OR description
+        if title:
+            title_match = title.lower() in task.get("title", "").lower()
+            description_match = title.lower() in task.get("description", "").lower()
+            if not (title_match or description_match):
+                match = False
 
         # Check priority match
         if priority and task.get("priority", "").lower() != priority.lower():
@@ -190,7 +195,7 @@ def complete_task_by_description(title: str = None, priority: str = None,
         )
 
         if not matching_tasks:
-            # If no exact match, try fuzzy matching for title
+            # If no exact match, try fuzzy matching for title and description
             if title:
                 all_tasks_result = TaskOperationsService.list_tasks(
                     user_id=user_id,
@@ -200,16 +205,29 @@ def complete_task_by_description(title: str = None, priority: str = None,
                 if all_tasks_result.get("status") == "success":
                     all_tasks = all_tasks_result.get("tasks", [])
 
-                    # Use fuzzy matching to find tasks with similar titles
+                    # Use fuzzy matching to find tasks with similar titles or descriptions
                     titles = [task.get("title", "") for task in all_tasks]
+                    descriptions = [task.get("description", "") for task in all_tasks]
+                    
+                    # Search in titles
                     close_matches = get_close_matches(title.lower(),
                                                    [t.lower() for t in titles],
                                                    n=3, cutoff=0.3)
+                    
+                    # Also search in descriptions if title search didn't find anything
+                    if not close_matches:
+                        close_matches = get_close_matches(title.lower(),
+                                                       [d.lower() for d in descriptions if d],
+                                                       n=3, cutoff=0.3)
 
                     if close_matches:
-                        # Find the tasks that correspond to the close matches
+                        # Find the tasks that correspond to the close matches (search both title and description)
                         for task in all_tasks:
-                            if task.get("title", "").lower() in [match.lower() for match in close_matches]:
+                            task_matched = (
+                                task.get("title", "").lower() in [match.lower() for match in close_matches] or
+                                task.get("description", "").lower() in [match.lower() for match in close_matches]
+                            )
+                            if task_matched:
                                 matching_tasks.append(task)
 
         if not matching_tasks:
@@ -218,7 +236,17 @@ def complete_task_by_description(title: str = None, priority: str = None,
                 "message": f"No tasks found matching the criteria: title='{title}', priority='{priority}', status='{status}'"
             }
 
-        # Complete all matching tasks
+        # CRITICAL: Prevent completing multiple tasks without explicit confirmation
+        if len(matching_tasks) > 1:
+            task_list = "\n".join([f"  • {t.get('title', 'Unknown')} (ID: {t.get('id', 'N/A')})" 
+                                   for t in matching_tasks])
+            return {
+                "status": "ambiguous",
+                "message": f"Found {len(matching_tasks)} matching tasks. Please clarify which one(s) to complete:\n{task_list}",
+                "tasks": matching_tasks
+            }
+
+        # Complete the single matching task
         completed_count = 0
         failed_tasks = []
 
@@ -269,7 +297,7 @@ def update_tasks_by_description(title: str = None, priority: str = None,
         )
 
         if not matching_tasks and title:
-            # If no exact match, try fuzzy matching for title
+            # If no exact match, try fuzzy matching for title and description
             all_tasks_result = TaskOperationsService.list_tasks(
                 user_id=user_id,
                 include_completed=True
@@ -278,16 +306,29 @@ def update_tasks_by_description(title: str = None, priority: str = None,
             if all_tasks_result.get("status") == "success":
                 all_tasks = all_tasks_result.get("tasks", [])
 
-                # Use fuzzy matching to find tasks with similar titles
+                # Use fuzzy matching to find tasks with similar titles or descriptions
                 titles = [task.get("title", "") for task in all_tasks]
+                descriptions = [task.get("description", "") for task in all_tasks]
+                
+                # Search in titles
                 close_matches = get_close_matches(title.lower(),
                                                [t.lower() for t in titles],
                                                n=5, cutoff=0.3)
+                
+                # Also search in descriptions if title search didn't find anything
+                if not close_matches:
+                    close_matches = get_close_matches(title.lower(),
+                                                   [d.lower() for d in descriptions if d],
+                                                   n=5, cutoff=0.3)
 
                 if close_matches:
-                    # Find the tasks that correspond to the close matches
+                    # Find the tasks that correspond to the close matches (search both title and description)
                     for task in all_tasks:
-                        if task.get("title", "").lower() in [match.lower() for match in close_matches]:
+                        task_matched = (
+                            task.get("title", "").lower() in [match.lower() for match in close_matches] or
+                            task.get("description", "").lower() in [match.lower() for match in close_matches]
+                        )
+                        if task_matched:
                             # Check if it's not already in matching_tasks to avoid duplicates
                             if not any(t['id'] == task['id'] for t in matching_tasks):
                                 matching_tasks.append(task)
@@ -298,7 +339,17 @@ def update_tasks_by_description(title: str = None, priority: str = None,
                 "message": f"No tasks found matching the criteria: title='{title}', priority='{priority}', status='{status}'"
             }
 
-        # Update all matching tasks
+        # CRITICAL: Prevent updating multiple tasks without explicit confirmation
+        if len(matching_tasks) > 1:
+            task_list = "\n".join([f"  • {t.get('title', 'Unknown')} (ID: {t.get('id', 'N/A')})" 
+                                   for t in matching_tasks])
+            return {
+                "status": "ambiguous",
+                "message": f"Found {len(matching_tasks)} matching tasks. Please clarify which one(s) to update:\n{task_list}",
+                "tasks": matching_tasks
+            }
+
+        # Update the single matching task
         updated_count = 0
         failed_tasks = []
 
@@ -357,7 +408,7 @@ def delete_tasks_by_description(title: str = None, priority: str = None,
         )
 
         if not matching_tasks and title:
-            # If no exact match, try fuzzy matching for title
+            # If no exact match, try fuzzy matching for title and description
             all_tasks_result = TaskOperationsService.list_tasks(
                 user_id=user_id,
                 include_completed=True
@@ -366,16 +417,29 @@ def delete_tasks_by_description(title: str = None, priority: str = None,
             if all_tasks_result.get("status") == "success":
                 all_tasks = all_tasks_result.get("tasks", [])
 
-                # Use fuzzy matching to find tasks with similar titles
+                # Use fuzzy matching to find tasks with similar titles or descriptions
                 titles = [task.get("title", "") for task in all_tasks]
+                descriptions = [task.get("description", "") for task in all_tasks]
+                
+                # Search in titles
                 close_matches = get_close_matches(title.lower(),
                                                [t.lower() for t in titles],
                                                n=3, cutoff=0.3)
+                
+                # Also search in descriptions if title search didn't find anything
+                if not close_matches:
+                    close_matches = get_close_matches(title.lower(),
+                                                   [d.lower() for d in descriptions if d],
+                                                   n=3, cutoff=0.3)
 
                 if close_matches:
-                    # Find the tasks that correspond to the close matches
+                    # Find the tasks that correspond to the close matches (search both title and description)
                     for task in all_tasks:
-                        if task.get("title", "").lower() in [match.lower() for match in close_matches]:
+                        task_matched = (
+                            task.get("title", "").lower() in [match.lower() for match in close_matches] or
+                            task.get("description", "").lower() in [match.lower() for match in close_matches]
+                        )
+                        if task_matched:
                             # Check if it's not already in matching_tasks to avoid duplicates
                             if not any(t['id'] == task['id'] for t in matching_tasks):
                                 matching_tasks.append(task)
@@ -386,7 +450,17 @@ def delete_tasks_by_description(title: str = None, priority: str = None,
                 "message": f"No tasks found matching the criteria: title='{title}', priority='{priority}', status='{status}'"
             }
 
-        # Delete all matching tasks
+        # CRITICAL: Prevent deleting multiple tasks without explicit confirmation
+        if len(matching_tasks) > 1:
+            task_list = "\n".join([f"  • {t.get('title', 'Unknown')} (ID: {t.get('id', 'N/A')})" 
+                                   for t in matching_tasks])
+            return {
+                "status": "ambiguous",
+                "message": f"Found {len(matching_tasks)} matching tasks. Please clarify which one(s) to delete:\n{task_list}",
+                "tasks": matching_tasks
+            }
+
+        # Delete the single matching task
         deleted_count = 0
         failed_tasks = []
 

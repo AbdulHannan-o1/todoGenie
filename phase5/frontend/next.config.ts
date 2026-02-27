@@ -52,7 +52,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/api/:user_id/tasks/:path*",
-        destination: `http://todogenie-backend:8000/tasks/api/:user_id/tasks/:path*`,
+        destination: `http://todogenie-backend:8000/tasks/:user_id/tasks/:path*`,
       },
       {
         source: "/api/v1/chat/:path*",
@@ -64,27 +64,27 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/api/auth/:path*",
-        destination: `http://todogenie-backend:8000/auth/api/auth/:path*`,
+        destination: `http://todogenie-backend:8000/auth/:path*`,
       },
       {
         source: "/auth/:path*",
-        destination: `http://todogenie-backend:8000/auth/api/auth/:path*`,
+        destination: `http://todogenie-backend:8000/auth/:path*`,
       },
       {
         source: "/api/tasks/:path*",
-        destination: `http://todogenie-backend:8000/tasks/api/tasks/:path*`,
+        destination: `http://todogenie-backend:8000/tasks/:path*`,
       },
       {
         source: "/:user_id/tasks/:path*",
-        destination: `http://todogenie-backend:8000/tasks/api/:user_id/tasks/:path*`,
+        destination: `http://todogenie-backend:8000/tasks/:user_id/tasks/:path*`,
       },
       {
         source: "/api/users/:path*",
-        destination: `http://todogenie-backend:8000/users/api/users/:path*`,
+        destination: `http://todogenie-backend:8000/users/:path*`,
       },
       {
         source: "/users/:path*",
-        destination: `http://todogenie-backend:8000/users/api/users/:path*`,
+        destination: `http://todogenie-backend:8000/users/:path*`,
       },
     ];
   },

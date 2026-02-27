@@ -86,16 +86,32 @@ def detect_task_completion_intent(message: str) -> Tuple[bool, Optional[str]]:
     )
 
     complete_match = None
-    if is_complete_intent:
-        # Check if the message contains date/time patterns first
-        if is_date_or_time_pattern(message_lower):
-            # If it looks like a date/time, don't treat numbers as task IDs
+    # Check if the message contains date/time patterns first
+    if is_date_or_time_pattern(message_lower):
+        # If it looks like a date/time, don't treat numbers as task IDs
+        complete_match = None
+    else:
+        # Try to extract task number only if not a date pattern
+        nums = re.findall(r'\d+', message)
+        if nums:
+            complete_match = nums[0]
+
+    # Check if this is a description-based completion request (no clear task ID but task-like content)
+    if is_complete_intent and not complete_match:
+        # Look for task descriptions in the message - if the user mentions a specific task name
+        # but doesn't provide a number, we should return the message for description-based lookup
+        # Extract potential task description by removing common completion phrases
+        completion_phrases = ['complete ', 'finish ', 'done ', 'mark ', 'as done', 'marked as done']
+        temp_msg = message_lower
+        for phrase in completion_phrases:
+            temp_msg = temp_msg.replace(phrase, ' ')
+
+        # If there are words that could represent a task description, return the cleaned message
+        # instead of a task ID to indicate this is a description-based request
+        remaining_words = temp_msg.strip().split()
+        if len([word for word in remaining_words if word not in task_indicators]) >= 2:
+            # This suggests a description-based request rather than an ID-based one
             complete_match = None
-        else:
-            # Try to extract task number only if not a date pattern
-            nums = re.findall(r'\d+', message)
-            if nums:
-                complete_match = nums[0]
 
     return is_complete_intent, complete_match
 
@@ -121,16 +137,32 @@ def detect_task_deletion_intent(message: str) -> Tuple[bool, Optional[str]]:
     )
 
     delete_match = None
-    if is_delete_intent:
-        # Check if the message contains date/time patterns first
-        if is_date_or_time_pattern(message_lower):
-            # If it looks like a date/time, don't treat numbers as task IDs
+    # Check if the message contains date/time patterns first
+    if is_date_or_time_pattern(message_lower):
+        # If it looks like a date/time, don't treat numbers as task IDs
+        delete_match = None
+    else:
+        # Try to extract task number only if not a date pattern
+        nums = re.findall(r'\d+', message)
+        if nums:
+            delete_match = nums[0]
+
+    # Check if this is a description-based deletion request (no clear task ID but task-like content)
+    if is_delete_intent and not delete_match:
+        # Look for task descriptions in the message - if the user mentions a specific task name
+        # but doesn't provide a number, return None to indicate this is a description-based request
+        # Extract potential task description by removing common deletion phrases
+        deletion_phrases = ['delete ', 'remove ', 'get rid of ', 'eliminate ', 'cancel ']
+        temp_msg = message_lower
+        for phrase in deletion_phrases:
+            temp_msg = temp_msg.replace(phrase, ' ')
+
+        # If there are words that could represent a task description,
+        # return None to indicate this is a description-based request
+        remaining_words = temp_msg.strip().split()
+        if len([word for word in remaining_words if word not in task_indicators]) >= 2:
+            # This suggests a description-based request rather than an ID-based one
             delete_match = None
-        else:
-            # Try to extract task number only if not a date pattern
-            nums = re.findall(r'\d+', message)
-            if nums:
-                delete_match = nums[0]
 
     return is_delete_intent, delete_match
 
@@ -260,3 +292,48 @@ def extract_task_description_from_message(message: str, task_num: str = None) ->
         return desc
     else:
         return None
+
+def detect_completion_statement_intent(message: str) -> Tuple[bool, Optional[str]]:
+    """
+    Detect if user is describing completion of a specific task using natural language.
+    Returns: (is_completion_statement, extracted_task_description)
+    
+    Examples:
+    - "i successfully got the free vm from oracle" → (True, "free vm from oracle")
+    - "i prepared for eid" → (True, "prepared for eid")
+    - "i purchased the paid copilot cli" → (True, "paid copilot cli")
+    - "just finished my assignment" → (True, "my assignment")
+    """
+    message_lower = message.lower().strip()
+    
+    # Patterns for completion statements
+    completion_patterns = [
+        # "I [verb] [object]" patterns
+        r"^i\s+(?:have\s+)?(?:successfully\s+)?(?:got|completed|finished|done|purchased|prepared|deployed|submitted|acquired|done with|finished with)\s+(.+)$",
+        r"^i\s+(?:just\s+)?(?:got|completed|finished|done|purchased|prepared|deployed|submitted|acquired)\s+(.+)$",
+        
+        # "[Object] is done/completed" patterns
+        r"^(?:the\s+)?(.+?)\s+(?:is\s+)?(?:done|completed|finished|ready)$",
+        
+        # "finally/just [verb]" patterns
+        r"^(?:just|finally|already)\s+(?:got|completed|finished|done|purchased|prepared|deployed|submitted|acquired)\s+(?:the\s+)?(.+)$",
+        
+        # "done with [object]" patterns
+        r"^(?:i'm\s+)?done\s+with\s+(?:the\s+)?(.+)$",
+        r"^(?:i'm\s+)?finished\s+with\s+(?:the\s+)?(.+)$",
+        
+        # Simple statements
+        r"^(?:got|completed|finished|purchased|prepared|deployed|submitted)\s+(?:the\s+)?(.+)$",
+    ]
+    
+    for pattern in completion_patterns:
+        match = re.search(pattern, message_lower, re.IGNORECASE)
+        if match:
+            task_description = match.group(1).strip()
+            # Filter out common non-task endings
+            task_description = re.sub(r'\s+(?:today|yesterday|now|just|already)$', '', task_description)
+            
+            if len(task_description) > 3:  # At least 3 characters
+                return True, task_description
+    
+    return False, None

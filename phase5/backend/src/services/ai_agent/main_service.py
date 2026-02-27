@@ -115,9 +115,28 @@ class AIAgentService:
                     "AVAILABLE TOOLS:\n"
                     "- create_task: Creates a new task (can be triggered by words like 'add', 'create', 'make')\n"
                     "- list_tasks: Lists all tasks; can filter to show specific tasks when requested by the user\n"
-                    "- update_task: Updates any aspect of a task, such as title, description, due date, reminder, recurrence, tags, and create child tasks\n"
-                    "- delete_task: Deletes any existing task, either a single task or multiple tasks\n"
-                    "- complete_task: Marks tasks as complete, either a single task or multiple tasks\n\n"
+                    "- update_task: Updates any aspect of a task BY ID, such as title, description, due date, reminder, recurrence, tags, and create child tasks\n"
+                    "- delete_task: Deletes any existing task BY ID, either a single task or multiple tasks\n"
+                    "- complete_task: Marks tasks as complete BY ID, either a single task or multiple tasks\n"
+                    "- update_tasks_by_description: Updates tasks based on their title, priority, or status description rather than requiring a specific ID\n"
+                    "- delete_tasks_by_description: Deletes tasks based on their title, priority, or status description rather than requiring a specific ID\n"
+                    "- complete_task_by_description: Marks tasks as complete based on their title, priority, or status description rather than requiring a specific ID\n\n"
+                    "IMPORTANT TOOL SELECTION RULES:\n"
+                    "- When a user refers to a task by its name, description, or characteristics without mentioning a specific number/ID, USE the description-based tools (update_tasks_by_description, delete_tasks_by_description, complete_task_by_description)\n"
+                    "- When a user explicitly mentions a task number or ID, USE the ID-based tools (update_task, delete_task, complete_task)\n"
+                    "- When in doubt, prioritize description-based tools as they are more user-friendly and natural\n\n"
+                    "EXAMPLES:\n"
+                    "- For 'Mark the grocery shopping task as done' → use complete_task_by_description with title='grocery shopping'\n"
+                    "- For 'Complete task 5' → use complete_task with task_id='5'\n"
+                    "- For 'Update my meeting prep task' → use update_tasks_by_description with title='meeting prep'\n\n"
+
+                     "🔴 CRITICAL RULES FOR TASK COMPLETION:\n"
+                     "- NEVER complete multiple tasks unless user EXPLICITLY mentions multiple tasks by name\n"
+                     "- When a user says 'I successfully got the free vm from oracle', extract the specific task identifier and use it to find the SINGLE matching task\n"
+                     "- If multiple tasks match the description, the tool will return status='ambiguous' with a list - ALWAYS ask user for clarification\n"
+                     "- Use context to understand which single task the user means\n"
+                     "- Example: 'I prepared for Eid' → complete ONLY the 'Prepare for Eid' task, NOT 'Prepare for Eitikaf'\n"
+                     "- If unsure, ask the user for clarification by listing the matching options\n\n"
 
                     "ADVANCED FEATURES:\n"
                     "You can also manage these features:\n"
@@ -294,7 +313,7 @@ class AIAgentService:
             if all_tool_results:
                 # Look for specific tool results to format response
                 list_tasks_result = None
-                operation_message = None
+                operation_messages = []  # Changed to list to accumulate all operations
 
                 for tool_result in all_tool_results:
                     result = tool_result.get("result")
@@ -306,22 +325,34 @@ class AIAgentService:
                         msg = result.get("message", "")
                         status = result.get("status", "")
 
+                        # Handle ambiguous status (multiple matching tasks)
+                        if status == "ambiguous":
+                            operation_messages.append(f"❓ {msg}")
                         # Get meaningful message for operations
-                        if status == "success" and msg:
+                        elif status == "success" and msg:
                             if tool_name == "create_task":
-                                operation_message = f"✅ {msg}"
+                                operation_messages.append(f"✅ {msg}")
                             elif tool_name == "update_task":
-                                operation_message = f"✏️ {msg}"
+                                operation_messages.append(f"✏️ {msg}")
                             elif tool_name == "delete_task":
-                                operation_message = f"🗑️ {msg}"
+                                operation_messages.append(f"🗑️ {msg}")
                             elif tool_name == "complete_task":
-                                operation_message = f"✅ {msg}"
+                                operation_messages.append(f"✅ {msg}")
+                            elif tool_name == "update_tasks_by_description":
+                                operation_messages.append(f"✏️ {msg}")
+                            elif tool_name == "delete_tasks_by_description":
+                                operation_messages.append(f"🗑️ {msg}")
+                            elif tool_name == "complete_task_by_description":
+                                operation_messages.append(f"✅ {msg}")
+                        elif status == "error" and msg:
+                            # Also show error messages for operations
+                            operation_messages.append(f"❌ {msg}")
 
-                # Priority: list_tasks > operation_message > AI response > default
+                # Priority: list_tasks > operation_messages > AI response > default
                 if list_tasks_result is not None and len(list_tasks_result) > 0:
                     final_response_text = format_task_list_response(list_tasks_result)
-                elif operation_message:
-                    final_response_text = operation_message
+                elif operation_messages:  # Check if list is not empty
+                    final_response_text = "\n".join(operation_messages)  # Join all messages
                 elif not final_response_text:
                     final_response_text = "✅ Task completed successfully."
 
