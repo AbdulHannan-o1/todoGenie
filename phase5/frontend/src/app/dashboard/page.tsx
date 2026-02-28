@@ -327,7 +327,12 @@ export default function DashboardPage() {
                               <input
                                 type="checkbox"
                                 checked={task.status === 'completed'}
-                                onChange={() => handleTaskStatusChange(task)}
+                                onChange={() => {
+                                  const currentTask = tasks.find(t => t.id === task.id);
+                                  if (currentTask) {
+                                    handleTaskStatusChange(currentTask);
+                                  }
+                                }}
                                 className="h-4 w-4 rounded border-slate-600 bg-slate-700 text-cyan-600 focus:ring-cyan-500"
                               />
                               <div className="ml-3">
