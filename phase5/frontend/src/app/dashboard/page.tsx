@@ -136,10 +136,10 @@ export default function DashboardPage() {
 
   // Calculate stats based on tasks
   const totalTasks = tasks.length;
-  const completedTasks = tasks.filter(task => task.completed).length;
+  const completedTasks = tasks.filter(task => task.status === 'completed').length;
   const pendingTasks = totalTasks - completedTasks;
   const overdueTasks = tasks.filter(task => {
-    if (task.completed) return false; // Don't count completed tasks as overdue
+    if (task.status === 'completed') return false; // Don't count completed tasks as overdue
     if (!task.due_date) return false; // Don't count tasks without due dates as overdue
     try {
       const dueDate = new Date(task.due_date);
@@ -326,13 +326,13 @@ export default function DashboardPage() {
                             <div className="flex items-center">
                               <input
                                 type="checkbox"
-                                checked={task.completed}
+                                checked={task.status === 'completed'}
                                 onChange={() => handleTaskStatusChange(task)}
                                 className="h-4 w-4 rounded border-slate-600 bg-slate-700 text-cyan-600 focus:ring-cyan-500"
                               />
                               <div className="ml-3">
                                 <span
-                                  className={`${task.completed ? "line-through text-slate-500 cursor-pointer hover:text-cyan-400" : "text-white cursor-pointer hover:text-cyan-400"}`}
+                                  className={`${task.status === 'completed' ? "line-through text-slate-500 cursor-pointer hover:text-cyan-400" : "text-white cursor-pointer hover:text-cyan-400"}`}
                                   onClick={() => openTaskDetails(task)}
                                 >
                                   {task.title}
@@ -350,11 +350,11 @@ export default function DashboardPage() {
                           </td>
                           <td className="py-3 px-4">
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              task.completed
+                              task.status === 'completed'
                                 ? "bg-green-500/20 text-green-400"
                                 : "bg-yellow-500/20 text-yellow-400"
                             }`}>
-                              {task.completed ? "Completed" : "Pending"}
+                              {task.status === 'completed' ? "Completed" : "Pending"}
                             </span>
                           </td>
                           <td className="py-3 px-4">
