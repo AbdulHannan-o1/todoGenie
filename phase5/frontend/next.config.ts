@@ -6,7 +6,7 @@ const ContentSecurityPolicy = `
   style-src 'self' 'unsafe-inline';
   img-src 'self' blob: data:;
   media-src 'none';
-  connect-src 'self' http://localhost:8000 http://todogenie-backend:8000;
+  connect-src 'self' http://localhost:8000 http://localhost:3000 http://todogenie-backend:8000;
   font-src 'self';
 `;
 
@@ -45,6 +45,11 @@ const securityHeaders = [
   },
 ];
 
+// Determine backend URL based on environment
+const backendUrl = process.env.NODE_ENV === 'production' 
+  ? 'http://todogenie-backend:8000'
+  : 'http://localhost:8000';
+
 const nextConfig: NextConfig = {
   output: 'standalone',
   /* config options here */
@@ -52,39 +57,39 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/api/:user_id/tasks/:path*",
-        destination: `http://todogenie-backend:8000/tasks/:user_id/tasks/:path*`,
+        destination: `${backendUrl}/tasks/:user_id/tasks/:path*`,
       },
       {
         source: "/api/v1/chat/:path*",
-        destination: `http://todogenie-backend:8000/api/v1/chat/:path*`,
+        destination: `${backendUrl}/api/v1/chat/:path*`,
       },
       {
         source: "/api/v1/voice/:path*",
-        destination: `http://todogenie-backend:8000/api/v1/voice/:path*`,
+        destination: `${backendUrl}/api/v1/voice/:path*`,
       },
       {
         source: "/api/auth/:path*",
-        destination: `http://todogenie-backend:8000/auth/:path*`,
+        destination: `${backendUrl}/auth/:path*`,
       },
       {
         source: "/auth/:path*",
-        destination: `http://todogenie-backend:8000/auth/:path*`,
+        destination: `${backendUrl}/auth/:path*`,
       },
       {
         source: "/api/tasks/:path*",
-        destination: `http://todogenie-backend:8000/tasks/:path*`,
+        destination: `${backendUrl}/tasks/:path*`,
       },
       {
         source: "/:user_id/tasks/:path*",
-        destination: `http://todogenie-backend:8000/tasks/:user_id/tasks/:path*`,
+        destination: `${backendUrl}/tasks/:user_id/tasks/:path*`,
       },
       {
         source: "/api/users/:path*",
-        destination: `http://todogenie-backend:8000/users/:path*`,
+        destination: `${backendUrl}/users/:path*`,
       },
       {
         source: "/users/:path*",
-        destination: `http://todogenie-backend:8000/users/:path*`,
+        destination: `${backendUrl}/users/:path*`,
       },
     ];
   },
