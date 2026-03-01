@@ -116,6 +116,7 @@ def create_tasks_router() -> APIRouter:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
 
         updated_task = crud_service.update_task(task_id, task_update)
+        session.commit()
         return updated_task
 
     @router.delete("/{user_id}/tasks/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
