@@ -37,6 +37,7 @@ def create_tasks_router() -> APIRouter:
         task = Task(**task_data)
         crud_service = TaskCRUDService(session)
         created_task = crud_service.create_task(task)
+        session.commit()
         return created_task
 
     @router.get("/{user_id}/tasks", response_model=List[Task])
