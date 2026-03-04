@@ -11,9 +11,9 @@ def validate_input_text(text: str, max_length: int = 2000) -> str:
     """
     Validate and sanitize input text to prevent injection attacks
     """
-    if not text or not isinstance(text, str):
+    if not text or not isinstance(text, str) or text.strip() == "":
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Input text is required and must be a string"
         )
 

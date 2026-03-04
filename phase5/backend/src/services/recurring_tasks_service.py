@@ -87,10 +87,6 @@ class RecurringTaskService:
         interval = pattern.get('interval', 1)
         end_condition = pattern.get('end_condition', {})
 
-        # Check if the recurrence should end
-        if self._should_end_recurrence(end_condition, last_due_date):
-            return None
-
         # Calculate next occurrence based on frequency
         if frequency == 'daily':
             next_date = last_due_date + timedelta(days=interval)
@@ -122,6 +118,10 @@ class RecurringTaskService:
         else:
             # Unknown frequency, default to daily
             next_date = last_due_date + timedelta(days=1)
+
+        # Check if the next recurrence should end
+        if self._should_end_recurrence(end_condition, next_date):
+            return None
 
         return next_date
 

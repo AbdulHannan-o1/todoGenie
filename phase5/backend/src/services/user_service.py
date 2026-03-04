@@ -34,12 +34,13 @@ def create_user(session: Session, email: str, username: str, password: str) -> U
             import logging
             logging.exception("Database integrity error during user creation")
             # Check which constraint was violated
-            if 'ix_user_username' in str(e) or 'username' in str(e):
+            error_msg = str(getattr(e, 'orig', e))
+            if 'user.username' in error_msg or 'ix_user_username' in error_msg:
                 raise HTTPException(
                     status_code=400,
                     detail="Username already registered"
                 )
-            elif 'ix_user_email' in str(e) or 'email' in str(e):
+            elif 'user.email' in error_msg or 'ix_user_email' in error_msg:
                 raise HTTPException(
                     status_code=400,
                     detail="Email already registered"

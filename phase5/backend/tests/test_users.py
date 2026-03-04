@@ -25,11 +25,11 @@ def test_create_user(client: TestClient):
 def test_create_user_existing_email(client: TestClient):
     client.post(
         "/auth/register",
-        json={"email": "test@example.com", "username": "testuser", "password": "testpass"},
+        json={"email": "dup@example.com", "username": "dupuser1", "password": "testpass"},
     )
     response = client.post(
         "/auth/register",
-        json={"email": "test@example.com", "username": "testuser", "password": "testpass"},
+        json={"email": "dup@example.com", "username": "dupuser2", "password": "testpass"},
     )
     assert response.status_code == 400
     assert response.json()["detail"] == "Email already registered"
@@ -37,11 +37,11 @@ def test_create_user_existing_email(client: TestClient):
 def test_create_user_existing_username(client: TestClient):
     client.post(
         "/auth/register",
-        json={"email": "test@example.com", "username": "testuser", "password": "testpass"},
+        json={"email": "unique@example.com", "username": "shareduser", "password": "testpass"},
     )
     response = client.post(
         "/auth/register",
-        json={"email": "another@example.com", "username": "testuser", "password": "anotherpass"},
+        json={"email": "another@example.com", "username": "shareduser", "password": "anotherpass"},
     )
     assert response.status_code == 400
     assert response.json()["detail"] == "Username already registered"

@@ -1,261 +1,214 @@
-"""
-Integration tests for text-based todo creation in chatbot
-"""
 import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock
+import uuid
+import json
 from src.main import app
 from src.api.dependencies import get_current_active_user
-from src.models import User
-import uuid
-from src.services.chatbot import ChatbotService
-from src.services.task_operations import TaskOperationsService
+from src.models import User, Task
+from sqlmodel import Session, SQLModel, create_engine, select
+from sqlalchemy.pool import StaticPool
+from src.db.engine import set_test_engine
 
+# Use the same database setup as unit tests
+@pytest.fixture(name="engine")
+def engine_fixture():
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    SQLModel.metadata.create_all(engine)
+    set_test_engine(engine) # Set as global engine
+    return engine
+
+@pytest.fixture(name="test_user")
+def test_user_fixture(engine):
+    with Session(engine) as session:
+        user = User(
+            id=uuid.uuid4(),
+            email="test@example.com",
+            username="testuser",
+            hashed_password="mocked_password",
+            status="Active"
+        )
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+        return user
 
 @pytest.fixture
-def client():
-    """Create a test client with authenticated user"""
+def client(test_user, engine):
+    """Create a test client with authenticated user and shared engine"""
+    from src.db import get_session
+    
+    def override_get_session():
+        with Session(engine) as session:
+            yield session
+            
+    def mock_get_current_user():
+        return test_user
+
+    app.dependency_overrides[get_current_active_user] = mock_get_current_user
+    app.dependency_overrides[get_session] = override_get_session
+    
     with TestClient(app) as test_client:
-        # Mock the authentication dependency
-        def mock_get_current_user():
-            mock_user = User(
-                id=uuid.uuid4(),
-                email="test@example.com",
-                username="testuser",
-                hashed_password="$2b$12$examplehashedpassword",  # Properly hashed password
-                status="Active"
-            )
-            return mock_user
-
-        app.dependency_overrides[get_current_active_user] = mock_get_current_user
         yield test_client
-        app.dependency_overrides.clear()
+    
+    app.dependency_overrides.clear()
+    from src.db.engine import create_db_engine
+    set_test_engine(create_db_engine()) # Reset after test
 
-
-def test_text_based_todo_creation_integration(client):
+def test_text_based_todo_creation_full_flow(client, test_user, engine):
     """
-    Integration test: User types 'Add a task to buy groceries' and sees new task created
-    Tests the full flow from API endpoint through AI processing to task creation
+    Integration test: Full flow from API to DB using real AI Agent logic (mocked provider)
     """
-    # Mock the AI agent service to return predictable responses
-    with patch('src.services.chatbot.chatbot_service.process_user_message') as mock_process:
-        # Simulate successful task creation response
-        mock_process.return_value = {
-            "success": True,
-            "response": "I've created the task 'buy groceries' for you.",
-            "tool_results": [{
-                "status": "success",
-                "message": "Task 'buy groceries' created successfully",
-                "task_id": str(uuid.uuid4()),
-                "task": {
-                    "id": str(uuid.uuid4()),
-                    "title": "buy groceries",
-                    "description": None,
-                    "status": "pending"
-                }
-            }],
-            "conversation_id": str(uuid.uuid4())
-        }
+    mock_response_tool = MagicMock()
+    mock_response_tool.choices = [MagicMock()]
+    mock_message_tool = MagicMock()
+    mock_message_tool.content = None
+    mock_tool_call = MagicMock()
+    mock_tool_call.id = "call_123"
+    mock_tool_call.function.name = "create_task"
+    mock_tool_call.function.arguments = json.dumps({
+        "title": "buy groceries",
+        "priority": "high"
+    })
+    mock_message_tool.tool_calls = [mock_tool_call]
+    mock_response_tool.choices[0].message = mock_message_tool
 
-        # Make request to the chat endpoint
+    mock_response_final = MagicMock()
+    mock_response_final.choices = [MagicMock()]
+    mock_message_final = MagicMock()
+    mock_message_final.content = "I've added 'buy groceries' with high priority."
+    mock_message_final.tool_calls = None
+    mock_response_final.choices[0].message = mock_message_final
+
+    with patch('src.services.ai_agent.main_service.AIAgentService.current_client') as mock_client:
+        mock_client.chat.completions.create.side_effect = [mock_response_tool, mock_response_final]
+        
         response = client.post(
             "/api/v1/chat/send",
             json={
-                "content": "Add a task to buy groceries",
+                "content": "Add a task to buy groceries with high priority",
                 "message_type": "text"
             }
         )
-
-        # Assert successful response
+        
         assert response.status_code == 200
         data = response.json()
-
-        # Verify response structure
-        assert "conversation_id" in data
-        assert "response" in data
-        assert "tool_results" in data
         assert "buy groceries" in data["response"]
+        
+        # Verify Database
+        with Session(engine) as session:
+            tasks = session.exec(select(Task).where(Task.user_id == test_user.id)).all()
+            assert len(tasks) == 1
+            assert tasks[0].title == "buy groceries"
+            assert tasks[0].priority == "high"
 
-        # Verify that the mock was called correctly
-        mock_process.assert_called_once()
-
-
-def test_text_based_todo_listing_integration(client):
+def test_text_based_todo_listing_full_flow(client, test_user, engine):
     """
-    Integration test: User types 'Show my tasks' and sees their tasks
+    Integration test: Show tasks tool flow
     """
-    with patch('src.services.chatbot.chatbot_service.process_user_message') as mock_process:
-        # Simulate successful task listing response
-        mock_process.return_value = {
-            "success": True,
-            "response": "Here are your tasks: 1. Buy groceries, 2. Call mom",
-            "tool_results": [{
-                "status": "success",
-                "message": "Found 2 tasks",
-                "tasks": [
-                    {
-                        "id": str(uuid.uuid4()),
-                        "title": "Buy groceries",
-                        "description": None,
-                        "status": "pending",
-                        "priority": "medium",
-                        "due_date": None
-                    },
-                    {
-                        "id": str(uuid.uuid4()),
-                        "title": "Call mom",
-                        "description": "Call mother for her birthday",
-                        "status": "pending",
-                        "priority": "high",
-                        "due_date": "2023-12-25T10:00:00"
-                    }
-                ]
-            }],
-            "conversation_id": str(uuid.uuid4())
-        }
+    # Pre-populate DB
+    with Session(engine) as session:
+        session.add(Task(title="Exist task", user_id=test_user.id))
+        session.commit()
+        
+    mock_response_tool = MagicMock()
+    mock_response_tool.choices = [MagicMock()]
+    mock_tool_call = MagicMock()
+    mock_tool_call.function.name = "list_tasks"
+    mock_tool_call.function.arguments = json.dumps({})
+    
+    mock_msg = MagicMock()
+    mock_msg.content = None
+    mock_msg.tool_calls = [mock_tool_call]
+    mock_response_tool.choices[0].message = mock_msg
 
+    mock_response_final = MagicMock()
+    mock_response_final.choices = [MagicMock()]
+    mock_msg_final = MagicMock()
+    mock_msg_final.content = "You have 1 task: Exist task"
+    mock_msg_final.tool_calls = None
+    mock_response_final.choices[0].message = mock_msg_final
+
+    with patch('src.services.ai_agent.main_service.AIAgentService.current_client') as mock_client:
+        mock_client.chat.completions.create.side_effect = [mock_response_tool, mock_response_final]
+        
+        response = client.post(
+            "/api/v1/chat/send",
+            json={"content": "Show my tasks"}
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "Exist task" in data["response"]
+        assert len(data["tool_results"]) > 0
+        # tool_results[0] is the list of tasks returned by list_tasks_tool
+        tasks = data["tool_results"][0]
+        assert isinstance(tasks, list)
+        assert any(t["title"] == "Exist task" for t in tasks)
+
+def test_conversation_context_integration(client, test_user, engine):
+    """
+    Integration test: Verify conversation history is passed to AI Agent (chat_with_context path)
+    """
+    # 1. Create a conversation and an existing message
+    from src.models.conversation import Conversation, Message
+    with Session(engine) as session:
+        conv = Conversation(user_id=test_user.id, title="Test Conversation")
+        session.add(conv)
+        session.commit()
+        session.refresh(conv)
+        
+        msg = Message(
+            conversation_id=conv.id,
+            user_id=test_user.id,
+            content="I need help with my taxes",
+            role="user"
+        )
+        session.add(msg)
+        
+        reply = Message(
+            conversation_id=conv.id,
+            user_id=test_user.id,
+            content="Sure, what about taxes?",
+            role="assistant"
+        )
+        session.add(reply)
+        session.commit()
+        
+        conv_id = conv.id
+
+    # 2. Mock AI agent response for the new message
+    mock_response = MagicMock()
+    mock_response.choices = [MagicMock()]
+    mock_response.choices[0].message.content = "Ok, I remember we were talking about taxes."
+    mock_response.choices[0].message.tool_calls = None
+
+    with patch('src.services.ai_agent.main_service.AIAgentService.current_client') as mock_client:
+        mock_client.chat.completions.create.return_value = mock_response
+        
+        # 3. Send a new message in the same conversation
         response = client.post(
             "/api/v1/chat/send",
             json={
-                "content": "Show my tasks",
-                "message_type": "text"
+                "content": "Actually, let's add a task for it",
+                "conversation_id": str(conv_id)
             }
         )
-
+        
         assert response.status_code == 200
         data = response.json()
-
-        assert "conversation_id" in data
-        assert "response" in data
-        assert "tool_results" in data
-        assert "Buy groceries" in data["response"] or "Call mom" in data["response"]
-
-
-def test_text_based_todo_update_integration(client):
-    """
-    Integration test: User types 'Update task 1 to add description' and sees task updated
-    """
-    with patch('src.services.chatbot.chatbot_service.process_user_message') as mock_process:
-        mock_process.return_value = {
-            "success": True,
-            "response": "I've updated the task 'Buy groceries' with the new description.",
-            "tool_results": [{
-                "status": "success",
-                "message": "Task 'Buy groceries' updated successfully",
-                "task": {
-                    "id": str(uuid.uuid4()),
-                    "title": "Buy groceries",
-                    "description": "Get milk, bread, and eggs",
-                    "status": "pending"
-                }
-            }],
-            "conversation_id": str(uuid.uuid4())
-        }
-
-        response = client.post(
-            "/api/v1/chat/send",
-            json={
-                "content": "Update task 1 to add description: Get milk, bread, and eggs",
-                "message_type": "text"
-            }
-        )
-
-        assert response.status_code == 200
-        data = response.json()
-
-        assert "conversation_id" in data
-        assert "response" in data
-        assert "tool_results" in data
-
-
-def test_conversation_persistence_integration(client):
-    """
-    Integration test: Verify conversation is persisted and can be retrieved
-    """
-    conversation_id = str(uuid.uuid4())
-
-    with patch('src.services.chatbot.chatbot_service.process_user_message') as mock_process:
-        mock_process.return_value = {
-            "success": True,
-            "response": "I've created the task for you.",
-            "tool_results": [{"status": "success", "message": "Task created"}],
-            "conversation_id": conversation_id
-        }
-
-        # First message creates conversation
-        response1 = client.post(
-            "/api/v1/chat/send",
-            json={
-                "content": "Add a task to buy groceries",
-                "message_type": "text"
-            }
-        )
-
-        assert response1.status_code == 200
-        data1 = response1.json()
-        assert data1["conversation_id"] == conversation_id
-
-        # Verify we can get the conversation
-        response2 = client.get(f"/api/v1/chat/conversations/{conversation_id}")
-        assert response2.status_code == 200
-
-
-def test_multiple_task_operations_in_sequence(client):
-    """
-    Integration test: Multiple task operations in one session work correctly
-    """
-    conversation_id = str(uuid.uuid4())
-
-    with patch('src.services.chatbot.chatbot_service.process_user_message') as mock_process:
-        # Configure mock to return different responses for different calls
-        def side_effect(*args, **kwargs):
-            content = args[1] if len(args) > 1 else kwargs.get('content', '')
-            if 'add' in content.lower():
-                return {
-                    "success": True,
-                    "response": "Task added successfully",
-                    "tool_results": [{"status": "success", "message": "Task created"}],
-                    "conversation_id": conversation_id
-                }
-            elif 'show' in content.lower() or 'list' in content.lower():
-                return {
-                    "success": True,
-                    "response": "You have 1 task: Buy groceries",
-                    "tool_results": [{"status": "success", "message": "Found 1 task"}],
-                    "conversation_id": conversation_id
-                }
-            else:
-                return {
-                    "success": True,
-                    "response": "Operation completed",
-                    "tool_results": [{"status": "success", "message": "Operation completed"}],
-                    "conversation_id": conversation_id
-                }
-
-        mock_process.side_effect = side_effect
-
-        # Add a task
-        response1 = client.post(
-            "/api/v1/chat/send",
-            json={
-                "content": "Add a task to buy groceries",
-                "message_type": "text",
-                "conversation_id": conversation_id
-            }
-        )
-        assert response1.status_code == 200
-
-        # List tasks
-        response2 = client.post(
-            "/api/v1/chat/send",
-            json={
-                "content": "Show my tasks",
-                "message_type": "text",
-                "conversation_id": conversation_id
-            }
-        )
-        assert response2.status_code == 200
-
-
-if __name__ == "__main__":
-    pytest.main([__file__])
+        assert "taxes" in data["response"]
+        assert data["conversation_id"] == str(conv_id)
+        
+        # 4. Verify that the client was called with history
+        # The history should should include the 2 previous messages + system message + new user message
+        args, kwargs = mock_client.chat.completions.create.call_args
+        messages = kwargs.get('messages', [])
+        
+        # System + History (User, Assistant) + Current User
+        assert len(messages) >= 4
+        assert any("taxes" in m["content"] for m in messages if m["role"] == "user")

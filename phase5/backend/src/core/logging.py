@@ -6,7 +6,7 @@ import logging
 import time
 import json
 from typing import Any, Dict, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 
@@ -52,7 +52,7 @@ class AILogger:
             "conversation_id": conversation_id,
             "message_type": message_type,
             "message_length": len(message_content),
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
         self.logger.info(f"AI_REQUEST: {json.dumps(log_data)}")
 
@@ -76,7 +76,7 @@ class AILogger:
             "processing_time_ms": round(processing_time * 1000, 2),
             "success": success,
             "tool_results_count": len(tool_results) if tool_results else 0,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
         self.logger.info(f"AI_RESPONSE: {json.dumps(log_data)}")
 
@@ -96,7 +96,7 @@ class AILogger:
             "error_type": error_type,
             "error_message": error_message,
             "request_length": len(request_content),
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
         self.logger.error(f"AI_ERROR: {json.dumps(log_data)}")
 
@@ -117,7 +117,7 @@ class AILogger:
             "tool_name": tool_name,
             "success": success,
             "execution_time_ms": round(execution_time * 1000, 2),
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
         self.logger.info(f"TOOL_EXECUTION: {json.dumps(log_data)}")
 
@@ -135,7 +135,7 @@ class AILogger:
             "conversation_id": conversation_id,
             "message_count": message_count,
             "total_tokens": total_tokens,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
         self.logger.info(f"CONVERSATION_METRICS: {json.dumps(log_data)}")
 

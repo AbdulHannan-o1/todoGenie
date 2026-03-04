@@ -505,11 +505,11 @@ class TaskOperationsService:
         """
         try:
             user_uuid = UUID(user_id)
-            from datetime import datetime, timedelta
+            from datetime import datetime, timedelta, timezone
 
             with next(get_session()) as session:
-                # Calculate the future time threshold
-                threshold_time = datetime.now() + timedelta(hours=hours_ahead)
+                # Calculate the future time threshold (UTC aware to match model)
+                threshold_time = datetime.now(timezone.utc) + timedelta(hours=hours_ahead)
 
                 # Find tasks with reminder times within the specified window
                 statement = select(Task).where(

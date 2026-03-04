@@ -13,10 +13,12 @@ import uuid
 def client():
     """Create a test client with authenticated user"""
     with TestClient(app) as test_client:
-        # Mock the authentication dependency
+        # Mock the authentication dependency with a STABLE user ID
+        stable_user_id = uuid.UUID("12345678-1234-5678-1234-567812345678")
+        
         def mock_get_current_user():
             mock_user = User(
-                id=uuid.uuid4(),
+                id=stable_user_id,
                 email="test@example.com",
                 username="testuser",
                 hashed_password="$2b$12$examplehashedpassword",  # Properly hashed password
@@ -143,7 +145,34 @@ def test_send_message_with_conversation_id_contract(client):
     """
     Contract test for /api/v1/chat/send with conversation_id parameter
     """
-    conversation_id = str(uuid.uuid4())
+    # Create a conversation first to get a valid ID
+    from src.db import get_session
+    from src.models.conversation import Conversation
+    
+    with next(get_session()) as session:
+        # We need a user_id that matches the stable_user_id in the client fixture
+        test_user_id = uuid.UUID("12345678-1234-5678-1234-567812345678")
+        
+        from src.models import User
+        from sqlmodel import select
+        user = session.get(User, test_user_id)
+        if not user:
+            user = User(
+                id=test_user_id,
+                email="test@example.com",
+                username="testuser",
+                hashed_password="hashed_password",
+                status="Active"
+            )
+            session.add(user)
+            session.commit()
+            session.refresh(user)
+        
+        conversation = Conversation(user_id=test_user_id, title="Test Conversation")
+        session.add(conversation)
+        session.commit()
+        session.refresh(conversation)
+        conversation_id = str(conversation.id)
 
     response = client.post(
         "/api/v1/chat/send",
@@ -155,7 +184,7 @@ def test_send_message_with_conversation_id_contract(client):
     )
 
     # Should accept the request and return appropriate response
-    assert response.status_code in [200, 400, 422, 500], f"Expected 200, 400, 422, or 500, got {response.status_code}"
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}. Response: {response.text}"
 
     if response.status_code == 200:
         data = response.json()

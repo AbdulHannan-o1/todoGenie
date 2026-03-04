@@ -356,10 +356,11 @@ class AIAgentService:
                 elif not final_response_text:
                     final_response_text = "✅ Task completed successfully."
 
+            processing_time = time.time() - start_time
+
+            # Ensure we have a response
             if not final_response_text:
                 final_response_text = "✅ Task completed successfully."
-
-            processing_time = time.time() - start_time
 
             # Log the AI response
             ai_logger.log_ai_response(

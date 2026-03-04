@@ -49,10 +49,18 @@ app.include_router(voice_router, prefix="/api/v1/voice", tags=["voice"])
 async def generic_exception_handler(request: Request, exc: Exception):
     # Log the full exception for debugging
     import traceback
-    print(f"Generic exception: {exc}\n{traceback.format_exc()}")
+    import os
+    error_msg = f"Generic exception: {exc}\n{traceback.format_exc()}"
+    print(error_msg)
+    
+    # In testing mode, return the full traceback for easier debugging
+    detail = "An unexpected error occurred."
+    if os.getenv("TESTING") == "1":
+        detail = error_msg
+        
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"detail": "An unexpected error occurred."},
+        content={"detail": detail},
     )
 
 @app.exception_handler(HTTPException)

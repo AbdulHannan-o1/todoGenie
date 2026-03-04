@@ -54,21 +54,24 @@ def test_get_tasks_filtering(session: Session):
     pending_tasks = get_tasks_by_user(session, user_id=user_id)
     pending_tasks = [task for task in pending_tasks if task.status == "pending"]
     assert len(pending_tasks) == 2
-    assert task1 in pending_tasks
-    assert task3 in pending_tasks
+    pending_task_ids = [t.id for t in pending_tasks]
+    assert task1.id in pending_task_ids
+    assert task3.id in pending_task_ids
 
     # Filter by priority
     high_priority_tasks = get_tasks_by_user(session, user_id=user_id)
     high_priority_tasks = [task for task in high_priority_tasks if task.priority == "high"]
     assert len(high_priority_tasks) == 1
-    assert task2 in high_priority_tasks
+    high_priority_task_ids = [t.id for t in high_priority_tasks]
+    assert task2.id in high_priority_task_ids
 
     # Filter by tags
     home_tasks = get_tasks_by_user(session, user_id=user_id)
     home_tasks = [task for task in home_tasks if "home" in task.tags.split(',')]
     assert len(home_tasks) == 2
-    assert task1 in home_tasks
-    assert task3 in home_tasks
+    home_task_ids = [t.id for t in home_tasks]
+    assert task1.id in home_task_ids
+    assert task3.id in home_task_ids
 
     # Filter by due_date (example, assuming tasks are created with future dates)
     # Skip this test due to timezone comparison issues between stored and compared datetimes

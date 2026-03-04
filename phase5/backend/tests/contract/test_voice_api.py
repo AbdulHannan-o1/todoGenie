@@ -38,7 +38,7 @@ def test_voice_recognize_endpoint_contract(client):
     # Note: In v1, voice processing happens in browser, so this tests coordination endpoint
     response = client.post(
         "/api/v1/voice/recognize",
-        data=b"fake_audio_data",
+        files={"audio_data": ("audio.wav", b"fake_audio_data", "audio/wav")},
         params={"language": "en-US"}
     )
 
@@ -66,7 +66,7 @@ def test_voice_recognize_endpoint_language_parameter(client):
     for language in ["en-US", "en-GB", "es-ES", "fr-FR", "de-DE"]:
         response = client.post(
             "/api/v1/voice/recognize",
-            data=b"fake_audio_data",
+            files={"audio_data": ("audio.wav", b"fake_audio_data", "audio/wav")},
             params={"language": language}
         )
 
@@ -81,7 +81,7 @@ def test_voice_recognize_endpoint_missing_parameters(client):
     # Test without language parameter (if it's required)
     response = client.post(
         "/api/v1/voice/recognize",
-        data=b"fake_audio_data"
+        files={"audio_data": ("audio.wav", b"fake_audio_data", "audio/wav")}
     )
 
     # Could be 200 (with default language) or 422 (if language required)

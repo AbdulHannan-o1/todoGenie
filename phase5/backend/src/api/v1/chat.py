@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List, Optional
 from uuid import UUID
 import logging
+from pydantic import BaseModel
 
 from src.api.dependencies import get_current_active_user
 from src.models import User
@@ -17,11 +18,14 @@ router = APIRouter(tags=["chat"])
 logger = logging.getLogger(__name__)
 
 
+class ChatMessageRequest(BaseModel):
+    content: str
+    message_type: str = "text"
+    conversation_id: Optional[str] = None
+
 @router.post("/send")
 async def send_message(
-    content: str,
-    message_type: str = "text",  # "text" or "voice"
-    conversation_id: Optional[str] = None,
+    request: ChatMessageRequest,
     current_user: User = Depends(get_current_active_user)
 ):
     """
@@ -36,9 +40,9 @@ async def send_message(
             )
 
         # Validate and sanitize inputs
-        sanitized_content = validate_input_text(content)
-        validated_message_type = validate_message_type(message_type)
-        validated_conversation_id = validate_conversation_id(conversation_id)
+        sanitized_content = validate_input_text(request.content)
+        validated_message_type = validate_message_type(request.message_type)
+        validated_conversation_id = validate_conversation_id(request.conversation_id)
 
         # Convert conversation_id to UUID if provided
         conv_id = UUID(validated_conversation_id) if validated_conversation_id else None
@@ -54,7 +58,7 @@ async def send_message(
         if not result["success"]:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Error processing message: {result.get('error', 'Unknown error')}"
+                detail=result.get("error", "An error occurred in the chatbot service.")
             )
 
         return {
@@ -67,10 +71,18 @@ async def send_message(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error in send_message: {str(e)}")
+        import traceback
+        import os
+        error_msg = f"Error in send_message: {str(e)}\n{traceback.format_exc()}"
+        logger.error(error_msg)
+        
+        detail = "Internal server error"
+        if os.getenv("TESTING") == "1":
+            detail = error_msg
+            
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error"
+            detail=detail
         )
 
 

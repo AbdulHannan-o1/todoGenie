@@ -12,9 +12,13 @@ def create_db_engine(database_url: str | None = None) -> Engine:
             raise ValueError("DATABASE_URL environment variable not set.")
 
     connect_args = {}
+    poolclass = None
     if database_url.startswith("sqlite://"):
         # SQLite-specific settings
         connect_args["check_same_thread"] = False
+        if ":memory:" in database_url:
+            from sqlalchemy.pool import StaticPool
+            poolclass = StaticPool
     elif database_url.startswith("postgresql://") or database_url.startswith("postgresql+psycopg://"):
         # PostgreSQL-specific settings - adjust based on environment
         # For local Kubernetes PostgreSQL, use 'prefer' or 'disable'
@@ -24,7 +28,7 @@ def create_db_engine(database_url: str | None = None) -> Engine:
         else:
             connect_args["sslmode"] = "prefer"  # Use prefer as default
 
-    _engine = create_engine(database_url, echo=True, connect_args=connect_args)
+    _engine = create_engine(database_url, echo=True, connect_args=connect_args, poolclass=poolclass)
     return _engine
 
 def get_engine() -> Engine:

@@ -79,7 +79,7 @@ def test_get_single_task(client: TestClient, auth_headers: dict, session: Sessio
     assert data["title"] == "Single Task"
     assert data["id"] == str(task.id)
 
-def test_get_single_task_unauthorized(client: TestClient, another_auth_headers: dict, session: Session):
+def test_get_single_task_unauthorized(client: TestClient, auth_headers: dict, another_auth_headers: dict, session: Session):
     from sqlmodel import select
     user = session.exec(select(User).filter(User.username == "authuser")).first()
     task = Task(title="Unauthorized Task", user_id=user.id)
@@ -88,8 +88,8 @@ def test_get_single_task_unauthorized(client: TestClient, another_auth_headers: 
     session.refresh(task)
 
     response = client.get(f"/tasks/{user.id}/tasks/{task.id}", headers=another_auth_headers)
-    assert response.status_code == 404  # Should return 404 to prevent leaking task existence
-    assert response.json()["detail"] == "Task not found"
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Not authorized to view tasks for this user"
 
 def test_update_task(client: TestClient, auth_headers: dict, session: Session):
     from sqlmodel import select
@@ -108,7 +108,7 @@ def test_update_task(client: TestClient, auth_headers: dict, session: Session):
     data = response.json()
     assert data["title"] == "Updated Task"
 
-def test_update_task_unauthorized(client: TestClient, another_auth_headers: dict, session: Session):
+def test_update_task_unauthorized(client: TestClient, auth_headers: dict, another_auth_headers: dict, session: Session):
     from sqlmodel import select
     user = session.exec(select(User).filter(User.username == "authuser")).first()
     task = Task(title="Unauthorized Update", user_id=user.id)
@@ -121,8 +121,8 @@ def test_update_task_unauthorized(client: TestClient, another_auth_headers: dict
         headers=another_auth_headers,
         json={"title": "Attempted Update"},
     )
-    assert response.status_code == 404  # Should return 404 to prevent leaking task existence
-    assert response.json()["detail"] == "Task not found"
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Not authorized to update tasks for this user"
 
 def test_delete_task(client: TestClient, auth_headers: dict, session: Session):
     from sqlmodel import select
@@ -137,7 +137,7 @@ def test_delete_task(client: TestClient, auth_headers: dict, session: Session):
     from sqlmodel import select
     assert session.exec(select(Task).filter(Task.id == task.id)).first() is None
 
-def test_delete_task_unauthorized(client: TestClient, another_auth_headers: dict, session: Session):
+def test_delete_task_unauthorized(client: TestClient, auth_headers: dict, another_auth_headers: dict, session: Session):
     from sqlmodel import select
     user = session.exec(select(User).filter(User.username == "authuser")).first()
     task = Task(title="Unauthorized Delete", user_id=user.id)
@@ -146,5 +146,5 @@ def test_delete_task_unauthorized(client: TestClient, another_auth_headers: dict
     session.refresh(task)
 
     response = client.delete(f"/tasks/{user.id}/tasks/{task.id}", headers=another_auth_headers)
-    assert response.status_code == 404  # Should return 404 to prevent leaking task existence
-    assert response.json()["detail"] == "Task not found"
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Not authorized to delete tasks for this user"

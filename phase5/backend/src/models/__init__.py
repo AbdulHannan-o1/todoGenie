@@ -27,7 +27,7 @@ class Task(SQLModel, table=True):
     description: Optional[str] = None
     status: str = Field(default="pending")  # pending, in progress, completed, archived, cancelled
     priority: str = Field(default="medium")  # low, medium, high, urgent
-    recurrence_pattern: Optional[dict] = Field(default=None, sa_column=sa.Column(sa.Text))
+    recurrence_pattern: Optional[dict] = Field(default=None, sa_column=sa.Column(sa.JSON))
     due_date: Optional[datetime] = Field(sa_column=sa.Column(sa.DateTime(timezone=True), nullable=True))
     reminder_time: Optional[datetime] = Field(default=None, sa_column=sa.Column(sa.DateTime(timezone=True), nullable=True))
     tags: str = Field(default="")  # Will store comma-separated tag IDs or names

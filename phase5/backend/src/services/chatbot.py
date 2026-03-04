@@ -13,8 +13,6 @@ from src.models import User
 from .ai_agent import ai_agent_service
 from src.core.logging import ai_logger
 from src.api.v1.security_validations import validate_input_text, validate_user_ownership
-
-
 class ChatbotService:
     def __init__(self):
         self.ai_agent = ai_agent_service
@@ -28,21 +26,28 @@ class ChatbotService:
         Process a user message through the AI agent and return the response
         """
         start_time = time.time()
-
-        # Validate and sanitize inputs
-        sanitized_content = validate_input_text(content)
-        validated_message_type = message_type.lower() if message_type.lower() in ["text", "voice"] else "text"
-
-        # Log the incoming AI request
-        ai_logger.log_ai_request(
-            user_id=str(user_id),
-            conversation_id=str(conversation_id) if conversation_id else "new",
-            message_content=sanitized_content,
-            message_type=validated_message_type
-        )
-
+        sanitized_content = content
         try:
+            # Validate and sanitize inputs
+            sanitized_content = validate_input_text(content)
+            from src.api.v1.security_validations import validate_message_type
+            validated_message_type = validate_message_type(message_type)
+
+            # Log the incoming AI request
+            ai_logger.log_ai_request(
+                user_id=str(user_id),
+                conversation_id=str(conversation_id) if conversation_id else "new",
+                message_content=sanitized_content,
+                message_type=validated_message_type
+            )
+
             # Get or create conversation
+            if conversation_id and isinstance(conversation_id, str):
+                try:
+                    conversation_id = UUID(conversation_id)
+                except ValueError:
+                    pass # Handled by service
+                    
             conversation = await self.get_or_create_conversation(user_id, conversation_id)
 
             # If conversation_id is provided, validate user ownership
@@ -80,11 +85,11 @@ class ChatbotService:
                 )
 
             # Save AI response to conversation
-            if ai_response["success"]:
+            if ai_response and ai_response.get("success"):
                 ai_message = await self.save_message(
                     conversation_id=conversation.id,
                     user_id=user_id,  # This would be the AI's response, but we'll associate with user for simplicity
-                    content=ai_response["response"],
+                    content=ai_response.get("response", "✅ Operation completed."),
                     role="assistant",
                     message_type="text"
                 )
@@ -99,17 +104,17 @@ class ChatbotService:
                 user_id=str(user_id),
                 conversation_id=str(conversation.id),
                 request_content=sanitized_content,
-                response_content=ai_response["response"],
+                response_content=ai_response.get("response", ""),
                 processing_time=processing_time,
-                success=ai_response["success"],
+                success=ai_response.get("success", False),
                 tool_results=ai_response.get("tool_results", [])
             )
 
             return {
                 "conversation_id": conversation.id,
-                "response": ai_response["response"],
+                "response": ai_response.get("response", ""),
                 "tool_results": ai_response.get("tool_results", []),
-                "success": ai_response["success"]
+                "success": ai_response.get("success", False)
             }
         except Exception as e:
             processing_time = time.time() - start_time

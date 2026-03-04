@@ -71,9 +71,8 @@ def detect_task_completion_intent(message: str) -> Tuple[bool, Optional[str]]:
     """
     message_lower = message.lower().strip()
 
-    # Enhanced semantic understanding for complete task requests
     complete_keywords = ['complete', 'done', 'finish', 'mark done', 'mark as done', 'completed', 'finished', 'tick off']
-    task_indicators = ['task', 'tasks', 'item', 'items', 'thing', 'things', 'it']
+    task_indicators = ['task', 'tasks', 'item', 'items', 'thing', 'things', 'it', 'report', 'assignment', 'project', 'vm']
 
     # Count relevant keywords to determine if this is a complete task request
     complete_word_count = sum(1 for word in complete_keywords if word in message_lower)
@@ -122,9 +121,8 @@ def detect_task_deletion_intent(message: str) -> Tuple[bool, Optional[str]]:
     """
     message_lower = message.lower().strip()
 
-    # Enhanced semantic understanding for delete task requests
     delete_keywords = ['delete', 'remove', 'erase', 'get rid of', 'eliminate', 'cancel', 'trash', 'dispose']
-    task_indicators = ['task', 'tasks', 'item', 'items', 'thing', 'things', 'it']
+    task_indicators = ['task', 'tasks', 'item', 'items', 'thing', 'things', 'it', 'report', 'assignment', 'project', 'vm']
 
     # Count relevant keywords to determine if this is a delete task request
     delete_word_count = sum(1 for word in delete_keywords if word in message_lower)
@@ -173,9 +171,8 @@ def detect_task_update_intent(message: str) -> Tuple[bool, Optional[str]]:
     """
     message_lower = message.lower().strip()
 
-    # Enhanced semantic understanding for update task requests
     update_keywords = ['update', 'edit', 'change', 'modify', 'adjust', 'revise', 'alter', 'set', 'include', 'description', 'details', 'info', 'information']
-    task_indicators = ['task', 'tasks', 'item', 'items', 'thing', 'things', 'it']
+    task_indicators = ['task', 'tasks', 'item', 'items', 'thing', 'things', 'it', 'report', 'assignment', 'project', 'vm']
 
     # Count relevant keywords to determine if this is an update task request
     update_word_count = sum(1 for word in update_keywords if word in message_lower)
@@ -208,9 +205,8 @@ def detect_task_update_by_name_intent(message: str) -> bool:
     """
     message_lower = message.lower().strip()
 
-    # Enhanced semantic understanding for update task requests by name
     update_keywords = ['update', 'edit', 'change', 'modify', 'adjust', 'revise', 'alter', 'set', 'include', 'description', 'details', 'info', 'information']
-    task_indicators = ['task', 'tasks', 'item', 'items', 'thing', 'things', 'it']
+    task_indicators = ['task', 'tasks', 'item', 'items', 'thing', 'things', 'it', 'report', 'assignment', 'project', 'vm']
 
     # Count relevant keywords to determine if this is an update task request
     update_word_count = sum(1 for word in update_keywords if word in message_lower)
@@ -256,31 +252,34 @@ def extract_task_description_from_message(message: str, task_num: str = None) ->
     """
     Extract description from message (everything after common patterns)
     """
-    message_lower = message.lower()
     desc = message
 
-    # Look for common patterns that indicate a description follows
-    for pattern in [
-        r'(?:description[:\s]*|details[:\s]*|notes[:\s]*|info[:\s]*|is[:\s]*|to[:\s]*|for[:\s]*|about[:\s]*)',
-        r':\s*',  # Colon followed by space
-    ]:
-        parts = re.split(pattern, desc, maxsplit=1, flags=re.IGNORECASE)
-        if len(parts) > 1:
-            desc = parts[1].strip()
-            break
-
-    # If task_num was provided, remove the task reference part
+    # 1. If task_num was provided, handle it FIRST to avoid description indicators (like 'to')
+    # appearing earlier in the message than the task reference
     if task_num:
         # Split by the task number reference
         parts = re.split(rf'task\s*{task_num}[\s,]*', desc, maxsplit=1, flags=re.IGNORECASE)
         if len(parts) > 1:
             desc = parts[1].strip()
 
-        # Clean up common prefixes that follow task references
-        for prefix in ['to', 'to include', 'with', 'to have', 'containing', 'should', 'will']:
+        # Clean up common prefixes that follow task references (longest first to avoid partial matches)
+        prefixes = ['to include', 'to have', 'containing', 'should', 'will', 'with', 'to']
+        for prefix in prefixes:
             if desc.lower().startswith(prefix):
                 desc = desc[len(prefix):].strip()
                 break
+
+    # 2. Look for common description indicators if we haven't found a clean description yet
+    # We use more specific patterns (requiring :) for keyword indicators to avoid over-matching
+    for pattern in [
+        r'(?:description|details|notes|info|is|for|about)[:\s]*:',
+        r':\s+',
+    ]:
+        # Only split if the pattern is NOT at the very beginning
+        parts = re.split(pattern, desc, maxsplit=1, flags=re.IGNORECASE)
+        if len(parts) > 1 and parts[0].strip():
+            desc = parts[1].strip()
+            break
 
     # Remove leading/trailing punctuation and whitespace
     desc = re.sub(r'^[:\-,\s]+', '', desc)

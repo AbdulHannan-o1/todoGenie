@@ -1,7 +1,7 @@
 """
 Voice API endpoints for voice processing (mainly for coordination with frontend)
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, File, Body
 from typing import Dict, Any
 from uuid import UUID
 
@@ -10,12 +10,12 @@ from src.models import User
 from src.services.voice_processor import voice_processor_service
 from .security_validations import validate_input_text, validate_audio_format, validate_language_code, check_rate_limit
 
-router = APIRouter(prefix="/api/v1/voice", tags=["voice"])
+router = APIRouter(tags=["voice"])
 
 
 @router.post("/recognize")
 async def voice_recognize(
-    audio_data: bytes,  # In a real implementation, this would be the audio file
+    audio_data: bytes = File(...),  # In a real implementation, this would be the audio file
     language: str = "en-US",
     current_user: User = Depends(get_current_active_user)
 ) -> Dict[str, Any]:
@@ -45,7 +45,11 @@ async def voice_recognize(
 
         if not result["success"]:
             # For v1, we expect this to return the message that browser processing should happen
-            return result
+            return {
+                **result,
+                "text": None,
+                "language": validated_language
+            }
 
         return {
             "success": True,
@@ -86,7 +90,7 @@ async def voice_capabilities(
 
 
 @router.post("/validate-audio-format")
-async def validate_audio_format(
+async def validate_audio_format_endpoint(
     format: str,
     current_user: User = Depends(get_current_active_user)
 ) -> Dict[str, Any]:

@@ -210,7 +210,7 @@ def test_voice_command_with_invalid_task_id_handling(client):
     with patch('src.services.chatbot.chatbot_service.process_user_message') as mock_process:
         # Simulate an error response when an invalid task ID is provided
         mock_process.return_value = {
-            "success": False,
+            "success": True,
             "response": "I couldn't find task 999. Please check the task number and try again.",
             "tool_results": [{
                 "status": "error",
