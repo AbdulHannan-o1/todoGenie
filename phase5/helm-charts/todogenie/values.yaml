@@ -15,7 +15,7 @@ backend:
     repository: todogenie-backend
     pullPolicy: IfNotPresent
     # Overrides the image tag whose default is the chart appVersion.
-    tag: "30"
+    tag: "34"
   service:
     type: ClusterIP
     port: 8000
@@ -44,7 +44,7 @@ frontend:
     repository: todogenie-frontend
     pullPolicy: IfNotPresent
     # Overrides the image tag whose default is the chart appVersion.
-    tag: "17"
+    tag: "19"
   service:
     type: ClusterIP
     port: 3000
@@ -67,8 +67,9 @@ frontend:
     # targetMemoryUtilizationPercentage: 80
 
 # PostgreSQL configuration using Bitnami chart
+# Disabled - using Neon cloud database instead
 postgresql:
-  enabled: true
+  enabled: false
   image:
     tag: "latest"
   auth:

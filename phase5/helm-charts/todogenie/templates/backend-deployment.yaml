@@ -36,7 +36,10 @@ spec:
               protocol: TCP
           env:
             - name: DATABASE_URL
-              value: "postgresql://postgres:{{ .Values.postgresql.auth.postgresPassword }}@{{ .Release.Name }}-postgresql:5432/{{ .Values.postgresql.auth.database }}"
+              valueFrom:
+                secretKeyRef:
+                  name: backend-secrets
+                  key: DATABASE_URL
             - name: BACKEND_PORT
               value: "8000"
           livenessProbe:

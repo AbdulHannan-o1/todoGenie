@@ -297,19 +297,21 @@ export default function ChatPage() {
 
     try {
       // Send message to backend API
-      const params = new URLSearchParams({
+      const requestBody: { content: string; message_type: string; conversation_id?: string } = {
         content: inputMessage,
         message_type: 'text', // or 'voice' if coming from voice input
-      });
+      };
       if (selectedConversationId) {
-        params.append('conversation_id', selectedConversationId);
+        requestBody.conversation_id = selectedConversationId;
       }
 
-      const response = await fetch(`/api/v1/chat/send?${params}`, {
+      const response = await fetch(`/api/v1/chat/send`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -605,19 +607,21 @@ export default function ChatPage() {
 
                         try {
                           // Send message to backend API with voice type
-                          const params = new URLSearchParams({
+                          const requestBody: { content: string; message_type: string; conversation_id?: string } = {
                             content: transcript,
                             message_type: 'voice',
-                          });
+                          };
                           if (selectedConversationId) {
-                            params.append('conversation_id', selectedConversationId);
+                            requestBody.conversation_id = selectedConversationId;
                           }
 
-                          const response = await fetch(`/api/v1/chat/send?${params}`, {
+                          const response = await fetch(`/api/v1/chat/send`, {
                             method: 'POST',
                             headers: {
                               'Authorization': `Bearer ${token}`,
+                              'Content-Type': 'application/json',
                             },
+                            body: JSON.stringify(requestBody),
                           });
 
                           if (!response.ok) {

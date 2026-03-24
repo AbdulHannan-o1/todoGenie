@@ -232,11 +232,14 @@ def execute_tool(function_name: str, function_args: Dict[str, Any], user_id: str
         result = complete_task_tool(**task_args)
     # Handle our new enhanced functions that require user_id
     elif function_name == "update_tasks_by_description":
-        result = update_tasks_by_description(user_id=user_id, **function_args)
+        desc_args = {k: v for k, v in function_args.items() if k != "user_id"}
+        result = update_tasks_by_description(user_id=user_id, **desc_args)
     elif function_name == "delete_tasks_by_description":
-        result = delete_tasks_by_description(user_id=user_id, **function_args)
+        desc_args = {k: v for k, v in function_args.items() if k != "user_id"}
+        result = delete_tasks_by_description(user_id=user_id, **desc_args)
     elif function_name == "complete_task_by_description":
-        result = complete_task_by_description(user_id=user_id, **function_args)
+        desc_args = {k: v for k, v in function_args.items() if k != "user_id"}
+        result = complete_task_by_description(user_id=user_id, **desc_args)
     else:
         result = {"status": "error", "message": f"Unknown function: {function_name}"}
 

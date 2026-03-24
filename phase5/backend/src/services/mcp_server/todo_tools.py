@@ -160,8 +160,11 @@ def _find_tasks_by_criteria(user_id: str, title: Optional[str] = None,
         # Check title or description match (case-insensitive partial match)
         # This allows matching by task name OR description
         if title:
-            title_match = title.lower() in task.get("title", "").lower()
-            description_match = title.lower() in task.get("description", "").lower()
+            task_title = task.get("title") or ""
+            task_description = task.get("description") or ""
+            title_lower = title.lower() if title else ""
+            title_match = title_lower in task_title.lower()
+            description_match = title_lower in task_description.lower()
             if not (title_match or description_match):
                 match = False
 
@@ -208,27 +211,31 @@ def complete_task_by_description(title: str = None, priority: str = None,
                     # Use fuzzy matching to find tasks with similar titles or descriptions
                     titles = [task.get("title", "") for task in all_tasks]
                     descriptions = [task.get("description", "") for task in all_tasks]
-                    
-                    # Search in titles
-                    close_matches = get_close_matches(title.lower(),
-                                                   [t.lower() for t in titles],
-                                                   n=3, cutoff=0.3)
-                    
-                    # Also search in descriptions if title search didn't find anything
-                    if not close_matches:
-                        close_matches = get_close_matches(title.lower(),
-                                                       [d.lower() for d in descriptions if d],
+
+                    # Search in titles - handle None title safely
+                    title_lower = title.lower() if title else ""
+                    if title_lower:
+                        close_matches = get_close_matches(title_lower,
+                                                       [t.lower() for t in titles if t],
                                                        n=3, cutoff=0.3)
 
-                    if close_matches:
-                        # Find the tasks that correspond to the close matches (search both title and description)
-                        for task in all_tasks:
-                            task_matched = (
-                                task.get("title", "").lower() in [match.lower() for match in close_matches] or
-                                task.get("description", "").lower() in [match.lower() for match in close_matches]
-                            )
-                            if task_matched:
-                                matching_tasks.append(task)
+                        # Also search in descriptions if title search didn't find anything
+                        if not close_matches:
+                            close_matches = get_close_matches(title_lower,
+                                                           [d.lower() for d in descriptions if d],
+                                                           n=3, cutoff=0.3)
+
+                        if close_matches:
+                            # Find the tasks that correspond to the close matches (search both title and description)
+                            for task in all_tasks:
+                                task_title = task.get("title", "").lower()
+                                task_desc = task.get("description", "").lower()
+                                task_matched = (
+                                    task_title in [match.lower() for match in close_matches] or
+                                    task_desc in [match.lower() for match in close_matches]
+                                )
+                                if task_matched:
+                                    matching_tasks.append(task)
 
         if not matching_tasks:
             return {
