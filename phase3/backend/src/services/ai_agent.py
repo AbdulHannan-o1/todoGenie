@@ -1,17 +1,21 @@
 """
-AI Agent service for processing natural language commands with primary (Bonsai) and backup (Groq) providers
+AI Agent service for processing natural language commands with primary (Groq) and backup (Bonsai) providers
+
+This implementation follows the hackathon spec:
+- LLM interprets ALL user intent (no hardcoded keyword detection)
+- Conversation history is fetched from DB and passed to LLM
+- MCP tools are called autonomously by the LLM
 """
-import asyncio
 import time
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
+from uuid import UUID
 from openai import OpenAI
 from src.core.config import settings
-from src.models.conversation import MessageCreate
 from src.services.mcp_server.todo_tools import (
     create_task_tool, list_tasks_tool, update_task_tool,
-    delete_task_tool, complete_task_tool
+    delete_task_tool, complete_task_tool, get_task_details_tool
 )
-from src.core.logging import ai_logger, performance_monitor
+from src.core.logging import ai_logger
 import json
 
 
@@ -40,6 +44,7 @@ class AIAgentService:
         self.current_client = self.primary_client
         self.current_model = self.PROVIDERS["primary"]["model"]
         self.current_provider = "primary"
+        self.max_history_messages = 10  # Number of previous messages to include for context
 
     def _create_client(self, provider_type: str) -> OpenAI:
         """Create an OpenAI client for the specified provider"""
@@ -71,12 +76,63 @@ class AIAgentService:
         self.current_model = self.PROVIDERS["primary"]["model"]
         self.current_provider = "primary"
 
+    async def _get_conversation_history(
+        self,
+        conversation_id: Optional[str],
+        user_id: str,
+        max_messages: int = None
+    ) -> List[Dict[str, str]]:
+        """
+        Fetch last N messages from conversation history.
+        Returns list of {role, content} dicts for LLM.
+        
+        This enables the LLM to understand context from previous messages,
+        allowing it to resolve pronouns ("it", "that task") and follow-up questions.
+        """
+        if not conversation_id:
+            return []
+        
+        if max_messages is None:
+            max_messages = self.max_history_messages
+        
+        try:
+            from src.db import get_session
+            from src.models.conversation import Message
+            from sqlmodel import select
+            
+            with next(get_session()) as session:
+                statement = (
+                    select(Message)
+                    .where(Message.conversation_id == UUID(conversation_id))
+                    .order_by(Message.timestamp.desc())
+                    .limit(max_messages)
+                )
+                messages = session.exec(statement).all()
+                
+                # Reverse to get chronological order (oldest first)
+                return [
+                    {"role": msg.role, "content": msg.content}
+                    for msg in reversed(messages)
+                ]
+        except Exception as e:
+            ai_logger.logger.warning(f"Failed to fetch conversation history: {e}")
+            return []  # Return empty list on error, don't break the flow
+
     async def process_message(self,
                             message: str,
                             user_id: str,
                             conversation_id: Optional[str] = None) -> Dict[str, Any]:
         """
-        Process a user message and return the AI response
+        Process a user message and return the AI response.
+        
+        FLOW (per hackathon spec):
+        1. Fetch conversation history from DB
+        2. Send history + current message to LLM
+        3. LLM interprets intent and decides which tool to call
+        4. Execute tools called by LLM
+        5. Return LLM's natural language response
+        
+        NO hardcoded keyword detection - LLM handles ALL intent interpretation.
         """
         start_time = time.time()
 
@@ -88,334 +144,29 @@ class AIAgentService:
             message_type="text"
         )
 
-        # Check if user is asking to list/show tasks - handle directly
-        message_lower = message.lower().strip()
-
-        # Enhanced semantic understanding for task-related requests
-        # Check for keywords that indicate task-related intent
-        task_keywords = ['task', 'tasks', 'todo', 'to-do', 'to do', 'things to do', 'items', 'list', 'pending', 'active', 'current', 'my']
-        query_keywords = ['what', 'show', 'list', 'display', 'view', 'see', 'get', 'tell me', 'do i have', 'do i', 'are there']
-        status_keywords = ['pending', 'active', 'current', 'incomplete', 'open', 'remaining', 'left', 'not done', 'outstanding']
-
-        # Count relevant keywords to determine if this is a task-related query
-        task_word_count = sum(1 for word in task_keywords if word in message_lower)
-        query_word_count = sum(1 for word in query_keywords if word in message_lower)
-        status_word_count = sum(1 for word in status_keywords if word in message_lower)
-
-        # Determine if this is likely a task-related request based on keyword presence
-        is_task_related = (
-            (task_word_count > 0 and query_word_count > 0) or  # e.g., "show tasks", "list my tasks"
-            (task_word_count > 0 and status_word_count > 0) or  # e.g., "show pending tasks"
-            'what are my tasks' in message_lower or
-            'what are my pending' in message_lower or
-            'show me my tasks' in message_lower or
-            'show me my pending' in message_lower or
-            'list all my tasks' in message_lower or
-            'list my tasks' in message_lower
-        )
-
-        if is_task_related:
-            from src.services.mcp_server.todo_tools import list_tasks_tool
-            tasks = list_tasks_tool(user_id=user_id)
-
-            if isinstance(tasks, list) and len(tasks) > 0:
-                high_priority = []
-                medium_priority = []
-                low_priority = []
-                no_priority = []
-
-                for task in tasks:
-                    if isinstance(task, dict):
-                        title = task.get("title", "Untitled")
-                        due_date = task.get("due_date")
-                        if due_date and isinstance(due_date, str) and "T" in due_date:
-                            due_date = due_date.split("T")[0]
-                        priority = task.get("priority", "").lower() if task.get("priority") else ""
-
-                        task_info = f"• {title}"
-                        if due_date and due_date != "None":
-                            task_info += f" (Due: {due_date})"
-
-                        if priority == "high":
-                            high_priority.append(task_info)
-                        elif priority == "medium":
-                            medium_priority.append(task_info)
-                        elif priority == "low":
-                            low_priority.append(task_info)
-                        else:
-                            no_priority.append(task_info)
-
-                lines = ["📋 **Your Pending Tasks**\n"]
-
-                if high_priority:
-                    lines.append("🔴 **HIGH PRIORITY**")
-                    lines.extend(high_priority)
-                if medium_priority:
-                    lines.append("\n🟡 **MEDIUM PRIORITY**")
-                    lines.extend(medium_priority)
-                if low_priority:
-                    lines.append("\n🟢 **LOW PRIORITY**")
-                    lines.extend(low_priority)
-                if no_priority:
-                    lines.append("\n⚪ **NO PRIORITY SET**")
-                    lines.extend(no_priority)
-
-                lines.append(f"\n_{len(tasks)} task(s) total_")
-                final_response = "\n".join(lines)
-            else:
-                final_response = "✨ You have no pending tasks. Great job!"
-
-            return {
-                "response": final_response,
-                "tool_results": tasks if isinstance(tasks, list) else [],
-                "success": True
-            }
-
-        # Check if user wants to complete a task
-        # Enhanced semantic understanding for complete task requests
-        complete_keywords = ['complete', 'done', 'finish', 'mark done', 'mark as done', 'completed', 'finished', 'tick off']
-        task_indicators = ['task', 'tasks', 'item', 'items', 'thing', 'things', 'it']
-
-        # Count relevant keywords to determine if this is a complete task request
-        complete_word_count = sum(1 for word in complete_keywords if word in message_lower)
-        task_indicator_count = sum(1 for word in task_indicators if word in message_lower)
-
-        # Check for specific patterns indicating completion intent
-        is_complete_intent = (
-            complete_word_count > 0 and task_indicator_count > 0 or  # e.g., "complete task", "finish tasks"
-            any(pattern in message_lower for pattern in ['complete', 'done', 'finish']) and any(indicator in message_lower for indicator in ['task', 'tasks'])
-        )
-
-        import re
-        complete_match = None
-        if is_complete_intent:
-            # Try to extract task number
-            nums = re.findall(r'\d+', message)
-            if nums:
-                complete_match = nums[0]
-
-        if complete_match and not any(p in message_lower for p in ['create', 'add new', 'new task']):
-            from src.services.mcp_server.todo_tools import list_tasks_tool, complete_task_tool
-
-            tasks = list_tasks_tool(user_id=user_id)
-            if isinstance(tasks, list) and len(tasks) > 0:
-                task_idx = int(complete_match) - 1
-                if 0 <= task_idx < len(tasks):
-                    task = tasks[task_idx]
-                    task_id = task.get('id') if isinstance(task, dict) else None
-                    if task_id:
-                        result = complete_task_tool(task_id=task_id, completed=True)
-                        if isinstance(result, dict) and result.get('status') == 'success':
-                            task_title = task.get('title', 'Task')
-                            final_response = f"✅ Completed \"{task_title}\""
-                        else:
-                            final_response = "❌ Failed to complete task"
-                    else:
-                        final_response = "❌ Could not find task ID"
-                else:
-                    final_response = f"❌ Task {complete_match} not found"
-            else:
-                final_response = "No tasks found"
-
-            return {
-                "response": final_response,
-                "tool_results": [],
-                "success": True
-            }
-
-        # Check if user wants to delete a task
-        # Enhanced semantic understanding for delete task requests
-        delete_keywords = ['delete', 'remove', 'erase', 'get rid of', 'eliminate', 'cancel', 'trash', 'dispose']
-        task_indicators = ['task', 'tasks', 'item', 'items', 'thing', 'things', 'it']
-
-        # Count relevant keywords to determine if this is a delete task request
-        delete_word_count = sum(1 for word in delete_keywords if word in message_lower)
-        task_indicator_count = sum(1 for word in task_indicators if word in message_lower)
-
-        # Check for specific patterns indicating deletion intent
-        is_delete_intent = (
-            delete_word_count > 0 and task_indicator_count > 0 or  # e.g., "delete task", "remove tasks"
-            any(pattern in message_lower for pattern in ['delete', 'remove']) and any(indicator in message_lower for indicator in ['task', 'tasks'])
-        )
-
-        delete_match = None
-        if is_delete_intent:
-            nums = re.findall(r'\d+', message)
-            if nums:
-                delete_match = nums[0]
-
-        if delete_match and not any(p in message_lower for p in ['create', 'add new', 'new task']):
-            from src.services.mcp_server.todo_tools import list_tasks_tool, delete_task_tool
-
-            tasks = list_tasks_tool(user_id=user_id)
-            if isinstance(tasks, list) and len(tasks) > 0:
-                task_idx = int(delete_match) - 1
-                if 0 <= task_idx < len(tasks):
-                    task = tasks[task_idx]
-                    task_id = task.get('id') if isinstance(task, dict) else None
-                    if task_id:
-                        result = delete_task_tool(task_id=task_id)
-                        if isinstance(result, dict) and result.get('status') == 'success':
-                            task_title = task.get('title', 'Task')
-                            final_response = f"🗑️ Deleted \"{task_title}\""
-                        else:
-                            final_response = "❌ Failed to delete task"
-                    else:
-                        final_response = "❌ Could not find task ID"
-                else:
-                    final_response = f"❌ Task {delete_match} not found"
-            else:
-                final_response = "No tasks found"
-
-            return {
-                "response": final_response,
-                "tool_results": [],
-                "success": True
-            }
-
-        # Check if user wants to update a task
-        # Enhanced semantic understanding for update task requests
-        update_keywords = ['update', 'edit', 'change', 'modify', 'adjust', 'revise', 'alter', 'set', 'add', 'include', 'description', 'details', 'info', 'information']
-        task_indicators = ['task', 'tasks', 'item', 'items', 'thing', 'things', 'it']
-
-        # Count relevant keywords to determine if this is an update task request
-        update_word_count = sum(1 for word in update_keywords if word in message_lower)
-        task_indicator_count = sum(1 for word in task_indicators if word in message_lower)
-
-        # Check for specific patterns indicating update intent
-        is_update_intent = (
-            update_word_count > 0 and task_indicator_count > 0 or  # e.g., "update task", "edit tasks"
-            any(pattern in message_lower for pattern in ['update', 'edit', 'change', 'modify']) and any(indicator in message_lower for indicator in ['task', 'tasks'])
-        )
-
-        update_match = None
-        if is_update_intent:
-            nums = re.findall(r'\d+', message)
-            if nums:
-                update_match = nums[0]
-
-        if update_match and not any(p in message_lower for p in ['create', 'add new', 'new task']):
-            # Handle "task X" format
-            from src.services.mcp_server.todo_tools import list_tasks_tool, update_task_tool
-
-            tasks = list_tasks_tool(user_id=user_id)
-            if isinstance(tasks, list) and len(tasks) > 0:
-                task_idx = int(update_match) - 1
-                if 0 <= task_idx < len(tasks):
-                    task = tasks[task_idx]
-                    task_id = task.get('id') if isinstance(task, dict) else None
-                    if task_id:
-                        # Extract description
-                        desc_match = re.search(r'(?:description|details?|more info)[:\s]+(.+)', message_lower)
-                        if not desc_match:
-                            parts = re.split(rf'task\s*{update_match}', message, maxsplit=1, flags=re.IGNORECASE)
-                            if len(parts) > 1:
-                                desc = parts[1].strip()
-                                for prefix in ['to include', 'with', 'to have', 'containing']:
-                                    if desc.startswith(prefix):
-                                        desc = desc[len(prefix):].strip()
-                                if len(desc) > 5:
-                                    desc_match = desc
-
-                        description = None
-                        if desc_match:
-                            description = desc_match.strip() if isinstance(desc_match, str) else desc_match.group(1).strip()
-
-                        if description:
-                            result = update_task_tool(task_id=task_id, description=description)
-                            if isinstance(result, dict) and result.get('status') == 'success':
-                                task_title = task.get('title', 'Task')
-                                final_response = f"✏️ Updated description for \"{task_title}\""
-                            else:
-                                final_response = "❌ Failed to update task"
-                        else:
-                            final_response = "❌ Please specify what description to add"
-                    else:
-                        final_response = "❌ Could not find task ID"
-                else:
-                    final_response = f"❌ Task {update_match} not found"
-            else:
-                final_response = "No tasks found"
-
-            return {
-                "response": final_response,
-                "tool_results": [],
-                "success": True
-            }
-
-        # Handle update by task name (e.g., "update debug error task in docker")
-        if is_update_intent and not any(p in message_lower for p in ['create', 'add new', 'new task']):
-            from src.services.mcp_server.todo_tools import list_tasks_tool, update_task_tool
-
-            tasks = list_tasks_tool(user_id=user_id)
-            if isinstance(tasks, list) and len(tasks) > 0:
-                # Try to find task by partial name match
-                target_task = None
-                for task in tasks:
-                    if isinstance(task, dict):
-                        title = task.get('title', '').lower()
-                        # Check if any key words from message match task title
-                        words = re.findall(r'\b\w+\b', message_lower)
-                        for word in words:
-                            if len(word) > 3 and word in title:
-                                target_task = task
-                                break
-                    if target_task:
-                        break
-
-                if target_task:
-                    task_id = target_task.get('id')
-                    # Extract description from message (everything after common patterns)
-                    desc = message
-                    for prefix in ['update', 'edit', 'change', 'modify', 'set description', 'update description', 'for']:
-                        if desc.lower().startswith(prefix):
-                            desc = desc[len(prefix):].strip()
-                            break
-
-                    # Remove task name from description
-                    task_name = target_task.get('title', '')
-                    desc = desc.replace(task_name, '').strip()
-                    for prefix in ['task', 'to', 'with', 'to include', 'containing']:
-                        desc = re.sub(rf'^{prefix}\s*', '', desc, flags=re.IGNORECASE).strip()
-
-                    description = desc if len(desc) > 5 else None
-
-                    if description:
-                        result = update_task_tool(task_id=task_id, description=description)
-                        if isinstance(result, dict) and result.get('status') == 'success':
-                            task_title = target_task.get('title', 'Task')
-                            final_response = f"✏️ Updated description for \"{task_title}\""
-                        else:
-                            final_response = "❌ Failed to update task"
-                    else:
-                        final_response = "❌ Please specify what description to add"
-                else:
-                    final_response = "❌ Could not find the task you want to update"
-            else:
-                final_response = "No tasks found"
-
-            return {
-                "response": final_response,
-                "tool_results": [],
-                "success": True
-            }
-
         try:
-            # Define the tools available to the AI agent
+            # STEP 1: Fetch conversation history for context
+            conversation_history = await self._get_conversation_history(
+                conversation_id=conversation_id,
+                user_id=user_id,
+                max_messages=self.max_history_messages
+            )
+            
+            # STEP 2: Define the tools available to the AI agent
             tools = [
                 {
                     "type": "function",
                     "function": {
                         "name": "create_task",
-                        "description": "Create a new task",
+                        "description": "Create a new task. Use when user wants to add/create/schedule a new todo item.",
                         "parameters": {
                             "type": "object",
                             "properties": {
-                                "title": {"type": "string", "description": "Task title"},
-                                "description": {"type": "string", "description": "Task description"},
-                                "tags": {"type": "string", "description": "Tags (comma-separated)"},
-                                "priority": {"type": "string", "description": "Priority: low, medium, high"},
-                                "due_date": {"type": "string", "description": "Due date (ISO format)"},
+                                "title": {"type": "string", "description": "Task title (required)"},
+                                "description": {"type": "string", "description": "Task description (optional)"},
+                                "tags": {"type": "string", "description": "Tags, comma-separated (optional)"},
+                                "priority": {"type": "string", "description": "Priority: low, medium, high", "enum": ["low", "medium", "high"]},
+                                "due_date": {"type": "string", "description": "Due date in ISO format (optional)"},
                             },
                             "required": ["title"],
                         },
@@ -425,10 +176,46 @@ class AIAgentService:
                     "type": "function",
                     "function": {
                         "name": "list_tasks",
-                        "description": "List all tasks for the user",
+                        "description": "List tasks for the user. Can filter by status (pending/completed/all), priority, tags, or search keywords. Use when user asks to see/show/list tasks.",
                         "parameters": {
                             "type": "object",
-                            "properties": {},
+                            "properties": {
+                                "status": {
+                                    "type": "string",
+                                    "description": "Filter by status: 'pending', 'completed', or 'all'. Default: 'all'",
+                                    "enum": ["pending", "completed", "all"]
+                                },
+                                "priority": {
+                                    "type": "string",
+                                    "description": "Filter by priority: 'high', 'medium', 'low'",
+                                    "enum": ["high", "medium", "low"]
+                                },
+                                "tags": {
+                                    "type": "string",
+                                    "description": "Filter by tags (comma-separated)"
+                                },
+                                "search": {
+                                    "type": "string",
+                                    "description": "Search keywords in title and description"
+                                }
+                            }
+                        },
+                    },
+                },
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "get_task_details",
+                        "description": "Get detailed information about a specific task by ID. Use when user asks about a specific task's details, description, or status.",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "task_id": {
+                                    "type": "string",
+                                    "description": "The UUID of the task to get details for"
+                                }
+                            },
+                            "required": ["task_id"],
                         },
                     },
                 },
@@ -436,7 +223,7 @@ class AIAgentService:
                     "type": "function",
                     "function": {
                         "name": "update_task",
-                        "description": "Update an existing task",
+                        "description": "Update an existing task's title, description, status, priority, or due date. Use when user wants to modify/change/edit a task.",
                         "parameters": {
                             "type": "object",
                             "properties": {
@@ -444,6 +231,8 @@ class AIAgentService:
                                 "title": {"type": "string", "description": "The new title"},
                                 "description": {"type": "string", "description": "The new description"},
                                 "status": {"type": "string", "description": "The new status"},
+                                "priority": {"type": "string", "description": "The new priority"},
+                                "due_date": {"type": "string", "description": "The new due date"},
                             },
                         },
                     },
@@ -452,7 +241,7 @@ class AIAgentService:
                     "type": "function",
                     "function": {
                         "name": "delete_task",
-                        "description": "Delete a task",
+                        "description": "Delete a task permanently. Use when user wants to remove/delete/erase a task.",
                         "parameters": {
                             "type": "object",
                             "properties": {
@@ -466,7 +255,7 @@ class AIAgentService:
                     "type": "function",
                     "function": {
                         "name": "complete_task",
-                        "description": "Mark a task as complete",
+                        "description": "Mark a task as complete or incomplete. Use when user wants to mark/finish/done with a task.",
                         "parameters": {
                             "type": "object",
                             "properties": {
@@ -491,34 +280,47 @@ class AIAgentService:
                     "- Seamlessly blend friendship with task management\n\n"
 
                     "TASK MANAGEMENT CAPABILITIES:\n"
-                    "You can create, list, update, delete, and complete tasks using these tools:\n"
+                    "You can create, list, get details, update, delete, and complete tasks using these tools:\n"
                     "- create_task: Create new tasks\n"
-                    "- list_tasks: Show current tasks\n"
+                    "- list_tasks: Show current tasks (supports filters: status, priority, tags, search)\n"
+                    "- get_task_details: Get detailed info about a specific task\n"
                     "- update_task: Modify existing tasks\n"
                     "- delete_task: Remove tasks\n"
                     "- complete_task: Mark tasks as done\n\n"
 
-                    "CONVERSATIONAL INTELLIGENCE:\n"
-                    "- Engage in friendly chat about life, problems, goals\n"
-                    "- Detect when user mentions tasks during conversation\n"
-                    "- Recognize various ways users might ask about tasks:\n"
-                    "  * 'what are my tasks', 'show me pending tasks', 'list my tasks', 'what do I have to do'\n"
-                    "- Extract tasks from natural conversation:\n"
-                    "  * Identify due dates ('tomorrow', 'next week', 'by Friday')\n"
-                    "  * Recognize priorities ('urgent', 'important', 'when possible')\n"
-                    "  * Understand task details embedded in stories\n\n"
+                    "CONTEXT AWARENESS:\n"
+                    "- You have access to the last 10 messages in this conversation\n"
+                    "- Reference previous messages when user says 'that task', 'the one I mentioned', etc.\n"
+                    "- If user refers to something from earlier, use conversation history to understand\n"
+                    "- Resolve pronouns like 'it', 'them', 'that one' from context\n\n"
+
+                    "TASK QUERY INTELLIGENCE:\n"
+                    "- When user asks 'what are my completed tasks?' → call list_tasks(status='completed')\n"
+                    "- When user asks 'show pending tasks' → call list_tasks(status='pending')\n"
+                    "- When user asks 'tell me about [task name]' → first call list_tasks(search='[task name]'), then get_task_details(task_id)\n"
+                    "- When user asks 'high priority stuff' → call list_tasks(priority='high')\n"
+                    "- When user asks 'tasks about [topic]' → call list_tasks(search='[topic]')\n"
+                    "- When user asks 'what are my tasks' → call list_tasks(status='pending') to show pending tasks\n\n"
+
+                    "TASK ID RESOLUTION:\n"
+                    "- If user says 'task 3' or 'the third task', first call list_tasks() to get the list\n"
+                    "- Count to find the task at position 3, extract its ID, then operate on it\n"
+                    "- Never assume task IDs are sequential numbers\n\n"
 
                     "TASK CREATION GUIDELINES:\n"
                     "- title: Main task (extract from conversation)\n"
                     "- description: Details (derive from context)\n"
-                    "- priority: low, medium, or high (infer from urgency words)\n"
-                    "- due_date: ISO format (convert from natural language)\n"
-                    "- tags: Categories (derive from context)\n\n"
+                    "- priority: low, medium, or high (infer from urgency words like 'urgent', 'important', 'ASAP')\n"
+                    "- due_date: ISO format (convert from natural language like 'tomorrow', 'next week')\n"
+                    "- tags: Categories (derive from context like 'work', 'personal', 'health')\n\n"
 
-                    "TASK LISTING FORMAT:\n"
-                    "| # | Name | Due Date | Priority |\n"
-                    "|---|------|----------|----------|\n"
-                    "| 1 | Buy coffee | 2025-01-15 | high |\n\n"
+                    "RESPONSE FORMAT:\n"
+                    "- Be conversational and friendly\n"
+                    "- When showing tasks, format clearly with status indicators:\n"
+                    "  * Completed tasks: ✅ Task Name\n"
+                    "  * Pending tasks: ⏳ Task Name\n"
+                    "- Always mention due dates if they exist\n"
+                    "- Keep responses concise but informative\n\n"
 
                     "GUARDRAILS:\n"
                     "- Maintain professional yet friendly boundaries\n"
@@ -538,14 +340,17 @@ class AIAgentService:
                 )
             }
 
-            # Prepare the user message
+            # STEP 3: Prepare the user message
             user_message = {
                 "role": "user",
                 "content": message
             }
 
-            # Agentic loop: keep calling the AI until it stops making tool calls
-            messages = [system_message, user_message]
+            # STEP 4: Build messages array with conversation history
+            # Format: [system, ...history, current_user_message]
+            messages = [system_message] + conversation_history + [user_message]
+            
+            # STEP 5: Agentic loop - keep calling the AI until it stops making tool calls
             max_iterations = 5  # Prevent infinite loops
             all_tool_results = []
 
@@ -644,7 +449,9 @@ class AIAgentService:
                         if function_name == "create_task":
                             result = create_task_tool(**function_args)
                         elif function_name == "list_tasks":
-                            result = list_tasks_tool(user_id=function_args["user_id"])
+                            result = list_tasks_tool(**function_args)
+                        elif function_name == "get_task_details":
+                            result = get_task_details_tool(**function_args)
                         elif function_name == "update_task":
                             result = update_task_tool(**function_args)
                         elif function_name == "delete_task":
@@ -716,6 +523,20 @@ class AIAgentService:
                                 operation_message = f"🗑️ {msg}"
                             elif tool_name == "complete_task":
                                 operation_message = f"✅ {msg}"
+                            elif tool_name == "get_task_details":
+                                # Format task details nicely
+                                if "task" in result:
+                                    task = result["task"]
+                                    operation_message = f"📋 **{task.get('title', 'Task')}**\n"
+                                    if task.get('description'):
+                                        operation_message += f"\n{task['description']}\n"
+                                    if task.get('priority'):
+                                        operation_message += f"\nPriority: {task['priority'].capitalize()}\n"
+                                    if task.get('due_date'):
+                                        due = task['due_date'].split('T')[0]
+                                        operation_message += f"Due: {due}\n"
+                                    if task.get('status'):
+                                        operation_message += f"Status: {task['status']}\n"
 
                 # Priority: list_tasks > operation_message > AI response > default
                 if list_tasks_result is not None and len(list_tasks_result) > 0:
@@ -732,8 +553,11 @@ class AIAgentService:
                             if due_date and isinstance(due_date, str) and "T" in due_date:
                                 due_date = due_date.split("T")[0]
                             priority = task.get("priority", "").lower() if task.get("priority") else ""
-
-                            task_info = f"• {title}"
+                            status = task.get("status", "pending")
+                            
+                            # Status indicator
+                            status_icon = "✅" if status == "completed" else "⏳"
+                            task_info = f"{status_icon} {title}"
                             if due_date and due_date != "None":
                                 task_info += f" (Due: {due_date})"
 
@@ -746,7 +570,7 @@ class AIAgentService:
                             else:
                                 no_priority.append(task_info)
 
-                    lines = ["📋 **Your Pending Tasks**\n"]
+                    lines = ["📋 **Your Tasks**\n"]
 
                     if high_priority:
                         lines.append("🔴 **HIGH PRIORITY**")
@@ -761,11 +585,15 @@ class AIAgentService:
                         lines.extend(low_priority)
 
                     if no_priority:
-                        lines.append("\n⚪ **NO PRIORITY SET**")
+                        lines.append("\n⚪ **NO PRIORITY**")
                         lines.extend(no_priority)
 
                     lines.append(f"\n_{len(list_tasks_result)} task(s) total_")
                     final_response_text = "\n".join(lines)
+                    
+                elif list_tasks_result is not None and len(list_tasks_result) == 0:
+                    # No tasks found
+                    final_response_text = "✨ No tasks found matching your criteria. Great job staying on top of things!"
                 elif operation_message:
                     final_response_text = operation_message
                 elif not final_response_text:
