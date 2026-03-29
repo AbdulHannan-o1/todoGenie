@@ -57,10 +57,25 @@ def get_available_tools() -> List[Dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "list_tasks",
-                "description": "List all tasks for the user",
+                "description": "List tasks for the user. Can filter by status (pending/completed/all), priority (high/medium/low), or search keywords.",
                 "parameters": {
                     "type": "object",
-                    "properties": {},
+                    "properties": {
+                        "status": {
+                            "type": "string",
+                            "description": "Filter by status: 'pending', 'completed', or 'all'. Default: 'all'",
+                            "enum": ["pending", "completed", "all"]
+                        },
+                        "priority": {
+                            "type": "string",
+                            "description": "Filter by priority: 'high', 'medium', 'low'",
+                            "enum": ["high", "medium", "low"]
+                        },
+                        "search": {
+                            "type": "string",
+                            "description": "Search keywords in title and description"
+                        }
+                    }
                 },
             },
         },
@@ -214,8 +229,13 @@ def execute_tool(function_name: str, function_args: Dict[str, Any], user_id: str
         # Create task expects user_id as a parameter
         result = create_task_tool(user_id=user_id, **function_args)
     elif function_name == "list_tasks":
-        # List tasks expects user_id as a parameter
-        result = list_tasks_tool(user_id=user_id)
+        # List tasks with optional filters
+        result = list_tasks_tool(
+            user_id=user_id,
+            status=function_args.get("status"),
+            priority=function_args.get("priority"),
+            search=function_args.get("search")
+        )
     # Handle functions that don't require user_id as a parameter (they get user info from task_id)
     elif function_name == "update_task":
         # Update task doesn't expect user_id - it gets user info from the task itself

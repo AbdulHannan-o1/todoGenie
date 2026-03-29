@@ -1,5 +1,7 @@
 """
 Chatbot service for handling AI-powered conversations with voice and text support
+
+This service uses OpenAI Agents SDK with Agent + Runner pattern for AI processing.
 """
 import time
 from typing import Dict, Any, Optional, List
@@ -10,12 +12,21 @@ from sqlmodel import Session, select
 from src.db import get_session
 from src.models.conversation import Conversation, Message, ConversationCreate, MessageCreate
 from src.models import User
-from .ai_agent import ai_agent_service
+from src.services.ai_agent import AIAgentRunner
 from src.core.logging import ai_logger
 from src.api.v1.security_validations import validate_input_text, validate_user_ownership
+
+
 class ChatbotService:
+    """
+    Chatbot service for processing user messages through the AI agent.
+
+    Uses OpenAI Agents SDK with Agent + Runner pattern.
+    """
+
     def __init__(self):
-        self.ai_agent = ai_agent_service
+        """Initialize the chatbot service with AI Agent Runner."""
+        self.ai_agent = AIAgentRunner()
 
     async def process_user_message(self,
                                  user_id: UUID,
@@ -23,7 +34,16 @@ class ChatbotService:
                                  message_type: str = "text",
                                  conversation_id: Optional[UUID] = None) -> Dict[str, Any]:
         """
-        Process a user message through the AI agent and return the response
+        Process a user message through the AI agent and return the response.
+
+        Args:
+            user_id: User UUID
+            content: User message content
+            message_type: Type of message (text/voice)
+            conversation_id: Optional conversation UUID
+
+        Returns:
+            Dict with conversation_id, response, tool_results, and success status
         """
         start_time = time.time()
         sanitized_content = content
@@ -47,7 +67,7 @@ class ChatbotService:
                     conversation_id = UUID(conversation_id)
                 except ValueError:
                     pass # Handled by service
-                    
+
             conversation = await self.get_or_create_conversation(user_id, conversation_id)
 
             # If conversation_id is provided, validate user ownership
@@ -67,28 +87,27 @@ class ChatbotService:
                 message_type=validated_message_type
             )
 
-            # Process message with AI agent
-            # If this is an existing conversation, fetch history to provide context
+            # Process message with AI agent using Agent + Runner pattern
             if conversation_id:
                 conversation_history = await self.get_conversation_history(conversation.id, user_id)
-                ai_response = await self.ai_agent.chat_with_context(
+                ai_response = await self.ai_agent.chat(
                     message=sanitized_content,
                     user_id=str(user_id),
-                    conversation_history=conversation_history
+                    conversation_id=str(conversation.id)
                 )
             else:
-                # For new conversations, use basic process_message
-                ai_response = await self.ai_agent.process_message(
+                # For new conversations
+                ai_response = await self.ai_agent.chat(
                     message=sanitized_content,
                     user_id=str(user_id),
-                    conversation_id=str(conversation.id) if conversation.id else None
+                    conversation_id=None
                 )
 
             # Save AI response to conversation
             if ai_response and ai_response.get("success"):
                 ai_message = await self.save_message(
                     conversation_id=conversation.id,
-                    user_id=user_id,  # This would be the AI's response, but we'll associate with user for simplicity
+                    user_id=user_id,
                     content=ai_response.get("response", "✅ Operation completed."),
                     role="assistant",
                     message_type="text"

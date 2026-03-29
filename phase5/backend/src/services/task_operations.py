@@ -102,6 +102,80 @@ class TaskOperationsService:
             }
 
     @staticmethod
+    def list_tasks_with_filters(user_id: str, status: Optional[str] = None,
+                               priority: Optional[str] = None,
+                               search: Optional[str] = None) -> Dict[str, Any]:
+        """
+        List tasks for user with optional filters
+        
+        Parameters:
+        - user_id: User's UUID
+        - status: "pending", "completed", or "all"
+        - priority: "high", "medium", or "low"
+        - search: Keyword search in title/description
+        
+        Returns:
+        - Dict with status, message, tasks list
+        """
+        try:
+            with next(get_session()) as session:
+                user_uuid = UUID(user_id)
+                
+                # Build query
+                statement = select(Task).where(Task.user_id == user_uuid)
+                
+                # Apply status filter
+                if status and status != "all":
+                    if status.lower() == "completed":
+                        statement = statement.where(Task.status == "completed")
+                    elif status.lower() == "pending":
+                        statement = statement.where(Task.status != "completed")
+                
+                # Apply priority filter
+                if priority:
+                    statement = statement.where(Task.priority == priority.lower())
+                
+                # Apply search filter
+                if search:
+                    statement = statement.where(
+                        (Task.title.contains(search)) | 
+                        (Task.description.contains(search))
+                    )
+                
+                tasks = session.exec(statement).all()
+                
+                task_list = []
+                for task in tasks:
+                    task_list.append({
+                        "id": str(task.id),
+                        "title": task.title,
+                        "description": task.description,
+                        "status": task.status,
+                        "priority": task.priority,
+                        "due_date": task.due_date.isoformat() if task.due_date else None,
+                        "reminder_time": task.reminder_time.isoformat() if task.reminder_time else None,
+                        "tags": task.tags,
+                        "recurrence_pattern": task.recurrence_pattern,
+                        "parent_task_id": str(task.parent_task_id) if task.parent_task_id else None
+                    })
+                
+                return {
+                    "status": "success",
+                    "message": f"Found {len(task_list)} tasks",
+                    "tasks": task_list,
+                    "filters_applied": {
+                        "status": status,
+                        "priority": priority,
+                        "search": search
+                    }
+                }
+        except Exception as e:
+            return {
+                "status": "error",
+                "message": f"Failed to list tasks: {str(e)}"
+            }
+
+    @staticmethod
     def list_tasks(user_id: str, include_completed: bool = True,
                    priority_filter: Optional[str] = None,
                    due_date_start: Optional[str] = None,

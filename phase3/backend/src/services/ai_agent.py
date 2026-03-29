@@ -623,25 +623,46 @@ class AIAgentService:
 
         except Exception as e:
             processing_time = time.time() - start_time
-
-            # Log the error for debugging
+            error_str = str(e)
+            
+            # Log the full error for debugging
             ai_logger.log_ai_error(
                 user_id=user_id,
                 conversation_id=conversation_id or "unknown",
-                error_message=str(e),
+                error_message=error_str,
                 error_type=type(e).__name__,
                 request_content=message
             )
-
+            
             import logging
             logger = logging.getLogger(__name__)
-            logger.error(f"AI Agent error processing message: {str(e)}", exc_info=True)
-
+            logger.error(f"AI Agent error processing message: {error_str}", exc_info=True)
+            
+            # Return user-friendly error messages based on error type
+            if "rate limit" in error_str.lower() or "too many requests" in error_str.lower():
+                user_message = "I'm receiving too many requests right now. Please wait a moment and try again."
+            elif "api key" in error_str.lower() or "authentication" in error_str.lower() or "unauthorized" in error_str.lower():
+                user_message = "There's an authentication issue. Please contact support to verify the API configuration."
+            elif "connection" in error_str.lower() or "timeout" in error_str.lower() or "network" in error_str.lower():
+                user_message = "I'm having trouble connecting to the service. Please check your internet connection and try again."
+            elif "task" in error_str.lower() and ("not found" in error_str.lower() or "doesn't exist" in error_str.lower()):
+                user_message = "I couldn't find that task. It may have been deleted or doesn't exist."
+            elif "permission" in error_str.lower() or "access denied" in error_str.lower():
+                user_message = "You don't have permission to perform this action. Please check with the task owner."
+            elif "invalid" in error_str.lower() and ("format" in error_str.lower() or "format" in error_str.lower()):
+                user_message = "The information provided doesn't look quite right. Please check the format and try again."
+            elif "duplicate" in error_str.lower() or "already exists" in error_str.lower():
+                user_message = "This item already exists. Please try with a different name or description."
+            elif "groq" in error_str.lower() and ("paused" in error_str.lower() or "access has been paused" in error_str.lower()):
+                user_message = "The AI service is temporarily unavailable. Please try again in a few minutes or contact support."
+            else:
+                user_message = "Sorry, I encountered an unexpected error while processing your request. Please try again."
+            
             return {
-                "response": f"Sorry, I encountered an error processing your request: {str(e)}",
+                "response": user_message,
                 "tool_results": [],
                 "success": False,
-                "error": str(e)
+                "error": error_str  # Keep full error for debugging
             }
 
     async def chat_with_context(self,
@@ -680,25 +701,36 @@ class AIAgentService:
             return result
         except Exception as e:
             processing_time = time.time() - start_time
-
+            error_str = str(e)
+            
             # Log the error for debugging
             ai_logger.log_ai_error(
                 user_id=user_id,
                 conversation_id="context-chat",
-                error_message=str(e),
+                error_message=error_str,
                 error_type=type(e).__name__,
                 request_content=message
             )
-
+            
             import logging
             logger = logging.getLogger(__name__)
-            logger.error(f"AI Agent error processing message: {str(e)}", exc_info=True)
-
+            logger.error(f"AI Agent error processing message: {error_str}", exc_info=True)
+            
+            # Return user-friendly error message
+            if "rate limit" in error_str.lower():
+                user_message = "I'm receiving too many requests. Please wait a moment and try again."
+            elif "authentication" in error_str.lower() or "api key" in error_str.lower():
+                user_message = "There's an authentication issue. Please contact support."
+            elif "connection" in error_str.lower() or "timeout" in error_str.lower():
+                user_message = "Having trouble connecting. Please check your internet and try again."
+            else:
+                user_message = "Sorry, I encountered an error. Please try again."
+            
             return {
-                "response": f"Sorry, I encountered an error processing your request: {str(e)}",
+                "response": user_message,
                 "tool_results": [],
                 "success": False,
-                "error": str(e)
+                "error": error_str
             }
 
 

@@ -1,10 +1,17 @@
 """
 MCP tools for todo operations that can be called by the AI agent
 """
+import sys
+from pathlib import Path
 from typing import Dict, List, Optional
 from uuid import UUID
 from pydantic import BaseModel
-import aiomcp
+
+# Add parent directory to path for imports
+backend_dir = Path(__file__).parent.parent.parent.parent
+if str(backend_dir) not in sys.path:
+    sys.path.insert(0, str(backend_dir))
+
 from src.services.task_operations import TaskOperationsService
 import re
 from difflib import get_close_matches
@@ -53,15 +60,23 @@ def create_task_tool(title: str, description: Optional[str] = None, user_id: str
     )
 
 
-def list_tasks_tool(user_id: str = "", include_completed: bool = True,
-                   priority_filter: Optional[str] = None,
-                   due_date_start: Optional[str] = None,
-                   due_date_end: Optional[str] = None) -> List[Dict]:
+def list_tasks_tool(user_id: str = "", status: Optional[str] = None,
+                   priority: Optional[str] = None,
+                   search: Optional[str] = None) -> List[Dict]:
     """
-    List all tasks for a user via tool with optional filters
+    List tasks for a user with optional filters
+    
+    Parameters:
+    - user_id: User's UUID
+    - status: "pending", "completed", or "all"
+    - priority: "high", "medium", or "low"
+    - search: Keyword search in title/description
+    
+    Returns:
+    - List of task dicts matching filters
     """
-    result = TaskOperationsService.list_tasks(
-        user_id, include_completed, priority_filter, due_date_start, due_date_end
+    result = TaskOperationsService.list_tasks_with_filters(
+        user_id, status, priority, search
     )
     return result.get("tasks", [])
 

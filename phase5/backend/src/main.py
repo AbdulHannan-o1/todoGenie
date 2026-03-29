@@ -13,6 +13,7 @@ from .db.session import get_session
 from .db.engine import get_engine
 from apscheduler.schedulers.background import BackgroundScheduler
 from .jobs.reminder_job import send_reminders
+from .services.mcp_server.main import app as mcp_app
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -44,6 +45,7 @@ app.include_router(users_router, prefix="/users", tags=["users"])
 app.include_router(tasks_router, prefix="/tasks", tags=["tasks"])
 app.include_router(chat_router, prefix="/api/v1/chat", tags=["chat"])
 app.include_router(voice_router, prefix="/api/v1/voice", tags=["voice"])
+app.include_router(mcp_app, tags=["mcp-tools"])
 
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):
