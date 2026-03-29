@@ -1,25 +1,31 @@
 """
 AI Agent orchestrator for processing user messages.
 
-Uses OpenAI chat.completions API with MCP Client for tool execution.
-This follows the standard function calling pattern.
+Uses OpenAI Agents SDK with MCP Client for tool execution.
+Agent calls MCP server via HTTP instead of direct function calls.
+This follows the Phase V hackathon requirements.
 """
 import os
+import sys
+from pathlib import Path
 from typing import Dict, Any, Optional, List
-
-from openai import OpenAI
+from agents import Agent, Runner, function_tool, AsyncOpenAI, set_default_openai_client, set_default_openai_api
 from .mcp_client import MCPClient
+
+
+# Add backend directory to path for imports
+backend_dir = Path(__file__).parent.parent.parent.parent
+if str(backend_dir) not in sys.path:
+    sys.path.insert(0, str(backend_dir))
 
 
 class AIAgentError(Exception):
     """Base exception for AI Agent errors."""
-
     pass
 
 
 class ToolExecutionError(AIAgentError):
     """Raised when tool execution fails."""
-
     def __init__(self, tool_name: str, error: Exception):
         self.tool_name = tool_name
         self.error = error
@@ -28,191 +34,59 @@ class ToolExecutionError(AIAgentError):
 
 class AIAgentRunner:
     """
-    AI Agent orchestrator using OpenAI chat.completions API with MCP Client.
+    AI Agent orchestrator using OpenAI Agents SDK with MCP Client.
 
-    Uses standard function calling pattern with tool execution via MCP.
+    Agent calls MCP server via HTTP instead of direct function calls.
     """
 
-    def __init__(self, openai_api_key: Optional[str] = None):
+    def __init__(
+        self,
+        openai_api_key: Optional[str] = None,
+        model: str = "gpt-4o-mini",
+        mcp_client: Optional[MCPClient] = None
+    ):
         """
         Initialize the AI Agent Runner.
 
         Args:
             openai_api_key: OpenAI API key (defaults to environment variable)
+            model: Model to use (chat_completion, response, or assistant)
+            mcp_client: Optional MCP client instance
         """
         self.openai_api_key = openai_api_key or os.getenv("OPENAI_API_KEY")
         if not self.openai_api_key:
             raise ValueError("OpenAI API key must be provided or set in OPENAI_API_KEY environment variable")
 
-        self.mcp_client = MCPClient()
-        self.client = OpenAI(api_key=self.openai_api_key)
-        self.tools = self._get_tools()
+        self.model = model
+        self.mcp_client = mcp_client or MCPClient()
 
-    def _get_tools(self) -> List[Dict[str, Any]]:
+        # Set default OpenAI API type to chat_completions
+        set_default_openai_api("chat_completions")
+
+        # Create OpenAI-compatible client
+        self.openai_client = AsyncOpenAI(
+            api_key=self.openai_api_key,
+            base_url=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+        )
+        set_default_openai_client(self.openai_client)
+
+        # Create Agent with MCP tool function
+        self.agent = self._create_agent()
+
+    def _create_agent(self) -> Agent:
         """
-        Get the tool definitions for the AI agent.
+        Create Agent using MCP tool function.
 
         Returns:
-            List of tool definitions compatible with OpenAI API
+            Configured Agent instance
         """
-        return [
-            {
-                "type": "function",
-                "function": {
-                    "name": "add_task",
-                    "description": "Create a new task",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "title": {"type": "string"},
-                            "description": {"type": "string"},
-                            "user_id": {"type": "string"},
-                            "tags": {"type": "string"},
-                            "priority": {"type": "string"},
-                            "due_date": {"type": "string"},
-                            "reminder_time": {"type": "string"},
-                            "recurrence_pattern": {"type": "object"},
-                            "parent_task_id": {"type": "string"}
-                        },
-                        "required": ["title", "user_id"]
-                    }
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                    "name": "list_tasks",
-                    "description": "List all tasks with filters",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "user_id": {"type": "string"},
-                            "status": {"type": "string"},
-                            "priority": {"type": "string"},
-                            "search": {"type": "string"}
-                        },
-                        "required": ["user_id"]
-                    }
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                    "name": "update_task",
-                    "description": "Update a task by ID",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "task_id": {"type": "string"},
-                            "title": {"type": "string"},
-                            "description": {"type": "string"},
-                            "status": {"type": "string"},
-                            "priority": {"type": "string"},
-                            "due_date": {"type": "string"},
-                            "reminder_time": {"type": "string"},
-                            "tags": {"type": "string"},
-                            "recurrence_pattern": {"type": "object"},
-                            "parent_task_id": {"type": "string"}
-                        },
-                        "required": ["task_id"]
-                    }
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                    "name": "complete_task",
-                    "description": "Mark a task as complete by ID",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "task_id": {"type": "string"},
-                            "completed": {"type": "boolean", "default": True}
-                        },
-                        "required": ["task_id"]
-                    }
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                    "name": "delete_task",
-                    "description": "Delete a task by ID",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "task_id": {"type": "string"}
-                        },
-                        "required": ["task_id"]
-                    }
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                    "name": "get_task_by_id",
-                    "description": "Get a task by ID",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "task_id": {"type": "string"}
-                        },
-                        "required": ["task_id"]
-                    }
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                    "name": "get_child_tasks",
-                    "description": "Get sub-tasks of a parent task",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "task_id": {"type": "string"}
-                        },
-                        "required": ["task_id"]
-                    }
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                    "name": "create_child_task",
-                    "description": "Create a sub-task under a parent task",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "parent_task_id": {"type": "string"},
-                            "title": {"type": "string"},
-                            "description": {"type": "string"},
-                            "user_id": {"type": "string"},
-                            "tags": {"type": "string"},
-                            "priority": {"type": "string"},
-                            "due_date": {"type": "string"},
-                            "reminder_time": {"type": "string"},
-                            "recurrence_pattern": {"type": "object"}
-                        },
-                        "required": ["parent_task_id", "title", "user_id"]
-                    }
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                    "name": "get_upcoming_reminders",
-                    "description": "Get upcoming reminders for a user",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "user_id": {"type": "string"},
-                            "hours_ahead": {"type": "integer", "default": 24}
-                        },
-                        "required": ["user_id"]
-                    }
-                }
-            }
-        ]
+        agent = Agent(
+            name="TaskManager",
+            instructions=self._get_system_prompt(),
+            model=self.model,
+            tools=[self._mcp_tool_function],
+        )
+        return agent
 
     def _get_system_prompt(self) -> str:
         """
@@ -241,7 +115,7 @@ class AIAgentRunner:
         - Recognize context from conversation to identify specific task
         - Be warm and conversational
 
-        AVAILABLE TOOLS (via MCP):
+        AVAILABLE TOOLS (via MCP Server):
         - add_task: Create a new task
         - list_tasks: List all tasks with filters
         - update_task: Update task by ID
@@ -252,6 +126,31 @@ class AIAgentRunner:
         - create_child_task: Create a sub-task
         - get_upcoming_reminders: Get reminder notifications
         """
+
+    @function_tool
+    async def _mcp_tool_function(self, tool_name: str, arguments) -> dict:
+        """
+        MCP tool function that Agent calls to execute tools via MCP Server.
+
+        This function is registered with the Agent, but it calls the MCP server
+        via HTTP instead of executing directly.
+
+        Args:
+            tool_name: Name of the tool to execute
+            arguments: Tool arguments as dictionary
+
+        Returns:
+            Tool execution result
+        """
+        try:
+            result = await self.mcp_client.call_tool(tool_name, arguments)
+            return result
+        except Exception as e:
+            return {
+                "status": "error",
+                "message": str(e),
+                "type": type(e).__name__
+            }
 
     async def chat(
         self,
@@ -268,7 +167,7 @@ class AIAgentRunner:
             conversation_id: Optional conversation ID for stateful chat
 
         Returns:
-            Dict with 'response', 'tool_results', and 'conversation_id'
+            Dict with 'response' and 'tool_results'
 
         Raises:
             AIAgentError: If agent execution fails
@@ -277,80 +176,18 @@ class AIAgentRunner:
             # Initialize MCP client
             await self.mcp_client.connect()
 
-            messages = [
-                {"role": "system", "content": self._get_system_prompt()},
-                {"role": "user", "content": message}
-            ]
-
-            # Agentic loop: keep calling the AI until it stops making tool calls
-            max_iterations = 50
-            all_tool_results = []
-
-            for iteration in range(max_iterations):
-                response = self.client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=messages,
-                    tools=self.tools,
-                    tool_choice="auto",
-                    max_tokens=500,
-                    temperature=0.7,
-                )
-
-                response_message = response.choices[0].message
-                tool_calls = response_message.tool_calls
-
-                # If no tool calls, we're done with the loop
-                if not tool_calls:
-                    break
-
-                # Add assistant's message to conversation
-                messages.append(response_message)
-
-                # Execute all tool calls in this iteration
-                for tool_call in tool_calls:
-                    function_name = tool_call.function.name
-                    function_args = {}
-
-                    try:
-                        function_args = json.loads(tool_call.function.arguments)
-                    except:
-                        function_args = {}
-
-                    # Execute the tool via MCP client
-                    result = await self.mcp_client.call_tool(function_name, function_args)
-
-                    # Get tool results
-                    tool_results = []
-                    if isinstance(result, dict) and "content" in result:
-                        # Handle MCP response format
-                        tool_results.append({
-                            "tool": function_name,
-                            "result": result["content"]
-                        })
-                    else:
-                        # Handle direct dict result
-                        tool_results.append({
-                            "tool": function_name,
-                            "result": result
-                        })
-
-                    all_tool_results.extend(tool_results)
-
-                    # Add tool response to messages for next iteration
-                    messages.append({
-                        "role": "tool",
-                        "content": json.dumps(result),
-                        "tool_call_id": tool_call.id
-                    })
+            # Use Runner.run_sync() for synchronous execution
+            # Agent handles tool calling automatically via @function_tool
+            result = Runner.run_sync(
+                self.agent,
+                message
+            )
 
             await self.mcp_client.close()
 
-            # Get final response text
-            final_response_text = response_message.content if response_message else None
-
             return {
-                "response": final_response_text or "✅ Task completed successfully.",
-                "tool_results": all_tool_results,
+                "response": result.final_output,
+                "tool_results": result.tool_results or [],
                 "conversation_id": conversation_id
             }
 
