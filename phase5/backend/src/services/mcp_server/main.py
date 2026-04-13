@@ -35,6 +35,20 @@ app = FastAPI(
     description="HTTP-based tool server for task management",
     version="1.0.0"
 )
+# Set default_response_class for FastAPI compatibility
+app.default_response_class = None
+app.generate_unique_id_function = None
+app.strict_content_type = None
+# Monkey-patch for compatibility
+if not hasattr(app, 'default_response_class'):
+    app.default_response_class = None
+if not hasattr(app, 'generate_unique_id_function'):
+    app.generate_unique_id_function = None
+if not hasattr(app, 'strict_content_type'):
+    app.strict_content_type = None
+
+# Export the app
+__all__ = ['app']
 
 # Add CORS middleware
 app.add_middleware(

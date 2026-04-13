@@ -38,10 +38,15 @@ spec:
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
-                  name: backend-secrets
+                  name: {{ include "todogenie.fullname" . }}-secrets
                   key: DATABASE_URL
             - name: BACKEND_PORT
               value: "8000"
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "todogenie.fullname" . }}-secrets
+                  key: OPENROUTER_API_KEY
           livenessProbe:
             httpGet:
               path: /

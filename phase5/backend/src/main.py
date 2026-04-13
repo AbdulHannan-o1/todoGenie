@@ -15,6 +15,21 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from .jobs.reminder_job import send_reminders
 from .services.mcp_server.main import app as mcp_app
 
+# Monkey-patch mcp_app for FastAPI compatibility
+if not hasattr(mcp_app, 'default_response_class'):
+    mcp_app.default_response_class = None
+if not hasattr(mcp_app, 'generate_unique_id_function'):
+    mcp_app.generate_unique_id_function = lambda route: route.path or "default"
+if not hasattr(mcp_app, 'strict_content_type'):
+    mcp_app.strict_content_type = None
+
+# Create a wrapper to handle the compatibility issue
+mcp_app_router = mcp_app.router
+if not hasattr(mcp_app_router, 'generate_unique_id_function'):
+    mcp_app_router.generate_unique_id_function = lambda route: route.path or "default"
+if not hasattr(mcp_app_router, 'default_response_class'):
+    mcp_app_router.default_response_class = None
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup logic
@@ -45,7 +60,7 @@ app.include_router(users_router, prefix="/users", tags=["users"])
 app.include_router(tasks_router, prefix="/tasks", tags=["tasks"])
 app.include_router(chat_router, prefix="/api/v1/chat", tags=["chat"])
 app.include_router(voice_router, prefix="/api/v1/voice", tags=["voice"])
-app.include_router(mcp_app, tags=["mcp-tools"])
+app.include_router(mcp_app_router, tags=["mcp-tools"])
 
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):
