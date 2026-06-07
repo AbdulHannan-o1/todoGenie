@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TodoGenie - AI Task Manager</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        #app {
+            width: 100%;
+            max-width: 1200px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 90vh;
+            min-height: 600px;
+        }
+
+        #chatkit-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #loading {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem;
+            color: #667eea;
+        }
+
+        #error {
+            flex: 1;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            padding: 40px;
+            text-align: center;
+            color: #e53e3e;
+        }
+
+        #error button {
+            margin-top: 20px;
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        #error button:hover {
+            background: #5a67d8;
+        }
+
+        .chatkit-logo {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            font-weight: bold;
+            color: white;
+            font-size: 1.2rem;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+    <div class="chatkit-logo">TodoGenie</div>
+
+    <div id="app">
+        <div id="chatkit-container">
+            <div id="loading">Loading ChatKit...</div>
+            <div id="error">
+                <h2>Failed to Load ChatKit</h2>
+                <p id="error-message">Please try refreshing the page</p>
+                <button onclick="location.reload()">Retry</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ChatKit SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@openai/chatkit@latest/dist/chatkit.umd.min.js"></script>
+
+    <script>
+        const CHATKIT_INSTANCE_LOCATOR_KEY = 'YOUR_CHATKIT_INSTANCE_LOCATOR_KEY';
+        const CHATKIT_SECRET_KEY = 'YOUR_CHATKIT_SECRET_KEY';
+        const BACKEND_API_URL = '/api/v1/chat';
+
+        let chatkit;
+
+        async function initChatKit() {
+            try {
+                // Load configuration from localStorage
+                const openaiApiKey = localStorage.getItem('openai_api_key');
+                const chatkitLocator = localStorage.getItem('chatkit_locator_key');
+                const chatkitSecret = localStorage.getItem('chatkit_secret_key');
+
+                if (!openaiApiKey || !chatkitLocator || !chatkitSecret) {
+                    showError('Please configure your API keys first. <a href="config.html">Click here to configure</a>');
+                    return;
+                }
+
+                // Set OpenAI API key for backend
+                document.cookie = `openai_api_key=${openaiApiKey}; path=/; max-age=86400`;
+
+                // Initialize ChatKit
+                chatkit = new Chatkit.default({
+                    instanceLocatorKey: chatkitLocator,
+                    key: chatkitSecret,
+                    defaultGlobalRoom: 'todo-ai-tasks',
+                    debug: true
+                });
+
+                // Connect to ChatKit
+                await chatkit.connect({
+                    onConnected: () => {
+                        console.log('Connected to ChatKit');
+                        document.getElementById('loading').style.display = 'none';
+
+                        // Join the default room
+                        chatkit.joinRoom({
+                            roomId: 'todo-ai-tasks'
+                        }).catch(err => {
+                            console.error('Failed to join room:', err);
+                        });
+                    },
+                    onDisconnected: () => {
+                        console.log('Disconnected from ChatKit');
+                        document.getElementById('loading').style.display = 'flex';
+                        document.getElementById('loading').textContent = 'Reconnecting...';
+                    },
+                    onError: (error) => {
+                        console.error('ChatKit error:', error);
+                        showError('Failed to connect to ChatKit. Please refresh the page.');
+                    }
+                });
+
+                // Handle incoming messages
+                chatkit.on('message', (message) => {
+                    console.log('Received message:', message);
+                    // Messages are handled by ChatKit UI automatically
+                });
+
+                // Handle room events
+                chatkit.on('room_joined', (room) => {
+                    console.log('Joined room:', room);
+                });
+
+                chatkit.on('room_left', (room) => {
+                    console.log('Left room:', room);
+                });
+
+            } catch (error) {
+                console.error('Failed to initialize ChatKit:', error);
+                showError('Failed to initialize ChatKit. Please check your configuration.');
+            }
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            const errorMessage = document.getElementById('error-message');
+            errorMessage.innerHTML = message;
+            errorDiv.style.display = 'flex';
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        // Initialize ChatKit when page loads
+        document.addEventListener('DOMContentLoaded', initChatKit);
+
+        // Expose chatkit instance globally for debugging
+        window.chatkit = chatkit;
+    </script>
+</body>
+</html>

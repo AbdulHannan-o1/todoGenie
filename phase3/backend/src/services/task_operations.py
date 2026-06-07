@@ -69,38 +69,133 @@ class TaskOperationsService:
             }
 
     @staticmethod
-    def list_tasks(user_id: str) -> Dict[str, Any]:
+    def list_tasks(
+        user_id: str,
+        status: Optional[str] = None,
+        priority: Optional[str] = None,
+        tags: Optional[str] = None,
+        search: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
-        List all tasks for the user
+        List tasks for user with optional filters
+        
+        Parameters:
+        - user_id: User's UUID
+        - status: "pending", "completed", or "all"
+        - priority: "high", "medium", or "low"
+        - tags: Comma-separated tags
+        - search: Keyword search in title/description
+        
+        Returns:
+        - Dict with status, message, tasks list, and applied filters
         """
         try:
             with next(get_session()) as session:
                 user_uuid = UUID(user_id)
-
-                # Query tasks for the user
+                
+                # Build query
                 statement = select(Task).where(Task.user_id == user_uuid)
+                
+                # Apply filters
+                if status and status != "all":
+                    is_completed = status.lower() == "completed"
+                    statement = statement.where(Task.completed == is_completed)
+                
+                if priority:
+                    statement = statement.where(Task.priority == priority.lower())
+                
+                if tags:
+                    tag_list = [t.strip() for t in tags.split(",")]
+                    # Search in tags field (comma-separated string)
+                    for tag in tag_list:
+                        statement = statement.where(Task.tags.contains(tag))
+                
+                if search:
+                    # Search in title and description
+                    statement = statement.where(
+                        (Task.title.contains(search)) | 
+                        (Task.description.contains(search))
+                    )
+                
                 tasks = session.exec(statement).all()
-
+                
                 task_list = []
                 for task in tasks:
                     task_list.append({
                         "id": str(task.id),
                         "title": task.title,
                         "description": task.description,
-                        "status": task.status,
+                        "status": "completed" if task.completed else "pending",
                         "priority": task.priority,
+                        "tags": task.tags,
                         "due_date": task.due_date.isoformat() if task.due_date else None
                     })
-
+                
                 return {
                     "status": "success",
                     "message": f"Found {len(task_list)} tasks",
-                    "tasks": task_list
+                    "tasks": task_list,
+                    "filters_applied": {
+                        "status": status,
+                        "priority": priority,
+                        "tags": tags,
+                        "search": search
+                    }
                 }
         except Exception as e:
             return {
                 "status": "error",
                 "message": f"Failed to list tasks: {str(e)}"
+            }
+
+    @staticmethod
+    def get_task_details(task_id: str, user_id: str) -> Dict[str, Any]:
+        """
+        Get detailed information about a specific task
+        
+        Parameters:
+        - task_id: UUID of the task
+        - user_id: User's UUID for ownership verification
+        
+        Returns:
+        - Dict with status, task details, or error message
+        """
+        try:
+            with next(get_session()) as session:
+                task_uuid = UUID(task_id)
+                task = session.get(Task, task_uuid)
+                
+                if not task:
+                    return {
+                        "status": "error",
+                        "message": f"Task {task_id} not found"
+                    }
+                
+                # Verify ownership
+                if str(task.user_id) != user_id:
+                    return {
+                        "status": "error",
+                        "message": "Access denied: Task does not belong to user"
+                    }
+                
+                return {
+                    "status": "success",
+                    "task": {
+                        "id": str(task.id),
+                        "title": task.title,
+                        "description": task.description,
+                        "status": "completed" if task.completed else "pending",
+                        "priority": task.priority,
+                        "tags": task.tags,
+                        "due_date": task.due_date.isoformat() if task.due_date else None,
+                        "created_at": task.created_at.isoformat(),
+                        "updated_at": task.updated_at.isoformat()
+                    }
+                }
+        except Exception as e:
+            return {
+                "status": "error",
+                "message": f"Failed to get task details: {str(e)}"
             }
 
     @staticmethod

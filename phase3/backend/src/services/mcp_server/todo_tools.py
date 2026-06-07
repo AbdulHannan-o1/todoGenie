@@ -37,12 +37,44 @@ def create_task_tool(title: str, description: Optional[str] = None, user_id: str
     return TaskOperationsService.create_task(title, description, user_id, tags, priority, due_date)
 
 
-def list_tasks_tool(user_id: str = "") -> List[Dict]:
+def list_tasks_tool(
+    user_id: str = "",
+    status: Optional[str] = None,
+    priority: Optional[str] = None,
+    tags: Optional[str] = None,
+    search: Optional[str] = None
+) -> List[Dict]:
     """
-    List all tasks for a user via tool
+    List all tasks for a user via tool with optional filters
+    
+    Parameters:
+    - user_id: User's UUID
+    - status: "pending", "completed", or "all"
+    - priority: "high", "medium", or "low"
+    - tags: Comma-separated tags
+    - search: Keyword search in title/description
+    
+    Returns:
+    - List of task dicts matching filters
     """
-    result = TaskOperationsService.list_tasks(user_id)
+    result = TaskOperationsService.list_tasks(
+        user_id, status, priority, tags, search
+    )
     return result.get("tasks", [])
+
+
+def get_task_details_tool(task_id: str, user_id: str = "") -> Dict:
+    """
+    Get detailed information about a specific task by ID.
+    
+    Parameters:
+    - task_id: UUID of the task
+    - user_id: User's UUID for ownership verification
+    
+    Returns:
+    - Dict with status, task details, or error message
+    """
+    return TaskOperationsService.get_task_details(task_id, user_id)
 
 
 def update_task_tool(task_id: str, title: Optional[str] = None,
